@@ -9,8 +9,7 @@ const manifest: ManifestType = {
   author: "toonflow",
   nativeDependencies: ["sharp"],
   nodes: {
-    text: "src/text/index.html",
-    json: "src/json/index.html",
+    text: "src/text/index.ts",
   },
 };
 

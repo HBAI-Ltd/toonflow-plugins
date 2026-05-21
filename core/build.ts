@@ -1,66 +1,55 @@
-import { build, type InlineConfig } from "vite";
+import { build, preview } from "vite";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { rmSync } from "fs";
-import { viteSingleFile } from "vite-plugin-singlefile";
-import vue from "@vitejs/plugin-vue";
-import flattenHtmlPlugin from "./flattenHtmlPlugin";
-import writeManifest from "./writeManifest";
+import fs from "fs";
 import manifest from "../manifest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const isWatch = process.argv.includes("--watch");
-const distDir = resolve(__dirname, "../dist");
+const rootDir = resolve(__dirname, "..");
+const outDir = resolve(rootDir, "dist");
+const configFile = resolve(rootDir, "vite.config.ts");
 
-// 单个节点的构建配置：内联成自包含的 <节点名>.html
-function nodeConfig(nodeName: string, entry: string): InlineConfig {
-  return {
-    configFile: false,
-    resolve: {
-      alias: {
-        "#": resolve(__dirname, ".."),
-        "@": resolve(__dirname, "../src"),
-      },
-    },
-    plugins: [
-      vue(),
-      viteSingleFile(), // 将 JS/CSS 内联进 html
-      flattenHtmlPlugin(nodeName), // 产物重命名为 <节点名>.html
-      // watch 模式下，每个节点重建后刷新 manifest 的 buildTime
-      {
-        name: "write-manifest-after-bundle",
-        writeBundle() {
-          writeManifest();
-        },
-      },
-    ],
-    build: {
-      minify: false,
-      sourcemap: false,
-      outDir: distDir,
-      emptyOutDir: false, // 多节点共用 dist，不能各自清空
-      watch: isWatch ? {} : null,
-      rollupOptions: {
-        input: { [nodeName]: resolve(__dirname, "..", entry) },
-      },
-    },
-  };
-}
+const isWatch = process.argv.includes("--watch");
 
 async function run() {
-  // 构建开始时清空一次 dist
-  rmSync(distDir, { recursive: true, force: true });
+  fs.rmSync(outDir, { recursive: true, force: true });
+  fs.mkdirSync(outDir, { recursive: true });
 
-  // viteSingleFile 关闭了代码分割，多入口无法在同一次构建中处理，
-  // 因此逐个节点单独构建。
-  for (const [nodeName, entry] of Object.entries(manifest.nodes)) {
-    await build(nodeConfig(nodeName, entry));
+  const nodeNames = Object.keys(manifest.nodes);
+  console.log(`\n[build] 打包 ${nodeNames.length} 个节点: ${nodeNames.join(", ")}\n`);
+
+  // vite.config.ts 在解析时读取 NODE_NAME 决定打包目标，逐个打包成各自的 UMD。
+  // watch 模式下 vite 自身负责监听重打包，无需 nodemon。
+  for (const name of nodeNames) {
+    process.env.NODE_NAME = name;
+    await build({ configFile, build: { watch: isWatch ? {} : null } });
   }
 
-  // 非 watch 模式下，构建结束写一次 manifest
-  if (!isWatch) {
-    writeManifest();
+  // manifest.json 的 nodes 改为指向打包产物
+  fs.writeFileSync(
+    resolve(outDir, "manifest.json"),
+    JSON.stringify(
+      {
+        ...manifest,
+        nodes: Object.fromEntries(nodeNames.map((n) => [n, `${n}.umd.js`])),
+        buildTime: Date.now(),
+      },
+      null,
+      2,
+    ),
+  );
+
+  // dev 模式下用 vite 自带的 preview 服务托管 dist，并放开 CORS 供宿主远程加载
+  if (isWatch) {
+    const server = await preview({
+      build: { outDir },
+      preview: { port: Number(process.env.PORT) || 5180, cors: true },
+    });
+    server.printUrls();
   }
 }
 
-run();
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
