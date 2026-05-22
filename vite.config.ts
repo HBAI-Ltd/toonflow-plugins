@@ -1,6 +1,9 @@
 import { defineConfig, type LibraryFormats } from "vite";
 import { resolve } from "path";
 import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import { TDesignResolver } from "@tdesign-vue-next/auto-import-resolver";
 import cssInjectedByJs from "vite-plugin-css-injected-by-js";
 import manifest from "./manifest";
 
@@ -26,7 +29,27 @@ export default defineConfig(() => {
         "@": resolve(__dirname, "src"),
       },
     },
-    plugins: [vue(), cssInjectedByJs()],
+    plugins: [
+      vue(),
+      AutoImport({
+        dts: "types/auto-imports.d.ts",
+        imports: ["vue", "pinia", "vue-router"],
+        resolvers: [
+          TDesignResolver({
+            library: "vue-next",
+          }),
+        ],
+      }),
+      Components({
+        dts: "types/components.d.ts",
+        resolvers: [
+          TDesignResolver({
+            library: "vue-next",
+          }),
+        ],
+      }),
+      cssInjectedByJs(),
+    ],
     build: {
       minify: false,
       sourcemap: false,
@@ -39,12 +62,13 @@ export default defineConfig(() => {
         fileName: () => `${nodeName}.umd.js`,
       },
       rollupOptions: {
-        external: ["vue"],
+        external: ["vue", "@vue-flow/core"],
         output: {
           globals: {
             vue: "Vue",
+            "@vue-flow/core": "VueFlow",
           },
-          exports: "named" as const,
+          exports: "named",
         },
       },
     },
