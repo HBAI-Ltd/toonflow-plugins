@@ -1,0 +1,60 @@
+.trackGroup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+  padding: 2px 6px;
+  border: 1px solid #d9e2f2;
+  border-radius: 4px;
+  background: #f8fbff;
+  vertical-align: baseline;
+}
+
+.trackItem {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.5;
+  word-break: break-all;
+  white-space: normal;
+}
+
+.trackAdd {
+  color: #1f8f55;
+  background: #e9f8ef;
+}
+
+.trackDel {
+  color: #c0392b;
+  background: #fdeeee;
+  text-decoration: line-through;
+}
+
+.trackActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.trackBtn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.trackAccept {
+  background: #1f8f55;
+}
+
+.trackReject {
+  background: #c0392b;
+}

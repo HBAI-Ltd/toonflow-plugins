@@ -1,10 +1,17 @@
+export interface NodeManifest {
+  path: string;
+  name: string;
+  sources: ("show" | "edit")[];
+  description?: string;
+}
+
 export interface ManifestType {
   manifest_version: 1;
-  name: string;
+  id: string;
   version: string;
   ToonflowVersion: string;
   displayName: string;
   author: string;
-  nativeDependencies: string[];
-  nodes: Record<string, string>;
+  description: string;
+  nodes: Record<string, NodeManifest>;
 }

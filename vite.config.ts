@@ -20,8 +20,6 @@ export default defineConfig(() => {
     throw new Error(`[vite.config] manifest.nodes 中找不到节点: ${nodeName}`);
   }
 
-  const libraryName = `${manifest.name}:${nodeName}`;
-
   return {
     resolve: {
       alias: {
@@ -51,13 +49,13 @@ export default defineConfig(() => {
       cssInjectedByJs(),
     ],
     build: {
-      minify: false,
+      minify: true,
       sourcemap: false,
       outDir: resolve(__dirname, "dist"),
       emptyOutDir: false,
       lib: {
-        entry: resolve(__dirname, entry),
-        name: libraryName,
+        entry: resolve(__dirname, entry.path),
+        name: `${manifest.id}:${nodeName}`,
         formats: ["umd"] as LibraryFormats[],
         fileName: () => `${nodeName}.umd.js`,
       },
@@ -68,7 +66,7 @@ export default defineConfig(() => {
             vue: "Vue",
             "@vue-flow/core": "VueFlow",
           },
-          exports: "named",
+          exports: "named" as const,
         },
       },
     },

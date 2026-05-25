@@ -6,9 +6,7 @@
 // biome-ignore lint: disable
 export {}
 declare global {
-  const DialogPlugin: typeof import('tdesign-vue-next').DialogPlugin
   const EffectScope: typeof import('vue').EffectScope
-  const MessagePlugin: typeof import('tdesign-vue-next').MessagePlugin
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
@@ -70,7 +68,6 @@ declare global {
   const triggerRef: typeof import('vue').triggerRef
   const unref: typeof import('vue').unref
   const useAttrs: typeof import('vue').useAttrs
-  const useChat: typeof import('@tdesign-vue-next/chat').useChat
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
   const useId: typeof import('vue').useId

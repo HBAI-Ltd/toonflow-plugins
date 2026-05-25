@@ -26,6 +26,7 @@ declare module 'vue' {
     LoginConfig: typeof import('./../components/setting/components/loginConfig.vue')['default']
     LogoutConfig: typeof import('./../components/setting/components/logoutConfig.vue')['default']
     MemoryConfig: typeof import('./../components/setting/components/memoryConfig.vue')['default']
+    MentionInput: typeof import('./../src/components/mentionInput.vue')['default']
     ModelMap: typeof import('./../components/setting/components/modelMap.vue')['default']
     ModelSelect: typeof import('./../components/modelSelect.vue')['default']
     OtherConfig: typeof import('./../components/setting/components/otherConfig.vue')['default']
