@@ -51,16 +51,20 @@ function handleCreated(editor: IDomEditor) {
   editorRef.value = editor;
   if (!data.value!.v) {
     const raw = data.value!.storyboardTable;
-    data.value!.storyboardTable = raw ? (marked(raw) as string) : raw;
+    if (raw) {
+      editor.setHtml(marked(raw) as string);
+    }
     data.value!.v = 1;
   }
 }
-
-
 </script>
 
 <script lang="ts">
+import { Boot } from "@wangeditor/editor";
+import markdownModule from "@wangeditor/plugin-md";
 import logo from "@/assets/logo.jpg";
+
+Boot.registerModule(markdownModule);
 
 interface Data {
   storyboardTable: string;
@@ -76,7 +80,7 @@ export const defaultData: Data = {
 
 <style lang="scss" scoped>
 .editorWrapper {
-  width: 100%;
+  width: 500px;
   max-width: 1000px;
   height: 100%;
   display: flex;
@@ -99,7 +103,6 @@ export const defaultData: Data = {
       height: 100% !important;
     }
   }
-
 }
 </style>
 

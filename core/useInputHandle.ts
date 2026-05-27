@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, isRef, toValue, type ComputedRef, type MaybeRefOrGetter } from "vue";
+import { computed, getCurrentInstance, isRef, toValue, type ComputedRef, type MaybeRefOrGetter, inject } from "vue";
 import { useVueFlow, type NodeProps } from "@vue-flow/core";
 import type { HANDLE_TYPE, HANDLEDOPT } from "./nodeType";
 
@@ -12,12 +12,9 @@ export interface InputHandleEntry<T = unknown> {
  * 返回 ComputedRef<{type, value}[]>，每个元素对应一条连接。
  * nodeId 内部通过 $attrs.nodeProps 自动获取。
  */
-export function useInputHandleValue<T = unknown>(
-  flowId: string,
-  inputHandleId: MaybeRefOrGetter<string>,
-): ComputedRef<InputHandleEntry<T>[]> {
+export function useInputHandleValue<T = unknown>(inputHandleId: MaybeRefOrGetter<string>): ComputedRef<InputHandleEntry<T>[]> {
   const instance = getCurrentInstance();
-  const { findNode, getEdges } = useVueFlow(flowId);
+  const { findNode, getEdges } = useVueFlow(inject("flowId"));
 
   return computed<InputHandleEntry<T>[]>(() => {
     const nId = (instance?.attrs.nodeProps as NodeProps | undefined)?.id;

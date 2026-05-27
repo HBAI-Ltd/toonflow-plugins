@@ -5,13 +5,14 @@
       <div class="row main">
         <t-image :src="withSize(asset.src, 30)" fit="cover" class="thumb thumbLg" @click="preview(asset.src)">
           <template #loading><t-loading size="small" /></template>
+          <template #error><t-icon name="close" /></template>
         </t-image>
         <div class="info">
           <div class="name" @mousedown.left.stop>{{ asset.name || "未命名" }}</div>
           <div class="desc" v-if="asset.desc">{{ asset.desc }}</div>
           <div class="tags">
             <t-tag size="small" variant="light" :theme="TYPE_THEME[asset.type]">{{ TYPE_LABEL[asset.type] }}</t-tag>
-            <t-tag size="small" variant="light-outline" :theme="STATE_THEME[asset.state]">{{ asset.state }}</t-tag>
+            <t-tag size="small" variant="light-outline" :theme="STATE_THEME[asset.state]">{{ asset.state ?? "未知状态" }}</t-tag>
           </div>
         </div>
         <div class="actions">
@@ -24,12 +25,13 @@
         <div v-for="(derive, deriveIndex) in asset.derive" :key="derive.id" class="row sub">
           <t-image :src="withSize(derive.src, 20)" fit="cover" lazy class="thumb thumbSm" @click="preview(derive.src)">
             <template #loading><t-loading size="small" /></template>
+            <template #error><t-icon name="close" /></template>
           </t-image>
           <div class="info">
             <div class="name" @mousedown.left.stop>{{ derive.name || "未命名" }}</div>
             <div class="tags">
               <t-tag size="small" variant="light" :theme="TYPE_THEME[derive.type]">{{ TYPE_LABEL[derive.type] }}</t-tag>
-              <t-tag size="small" variant="light-outline" :theme="STATE_THEME[derive.state]">{{ derive.state }}</t-tag>
+              <t-tag size="small" variant="light-outline" :theme="STATE_THEME[derive.state]">{{ derive.state ?? "未知状态" }}</t-tag>
             </div>
           </div>
           <div class="actions">
@@ -123,14 +125,61 @@ async function remove(asset: Asset, derive?: DeriveAsset) {
   }
 }
 
-// TODO: 实现编辑逻辑
-function edit(asset: Asset, derive?: DeriveAsset) {
+async function edit(asset: Asset, derive?: DeriveAsset) {
   const target = derive ?? asset;
-  console.log("%c edit target", "background:#465975", target);
-  window.$message?.info(derive ? "编辑衍生功能待开发" : "编辑资产功能待开发");
+
+  let needBuild = !target.flowId;
+  if (target.flowId) {
+    const {data} = await window.$pluginFn.flow.list({ id: target.flowId });
+    if (!data.data?.length) needBuild = true;
+  }
+
+  if (needBuild) {
+    target.flowId = Date.now();
+    await window.$pluginFn.flow.insert({
+      id: target.flowId,
+      flowData: JSON.stringify({
+        nodes: [
+          {
+            id: "2",
+            type: "pluginNode",
+            position: { x: 600, y: 100 },
+            data: {
+              pluginId: "toonflowPlugin:imageGenerate",
+              data: {
+                prompt: target.prompt || "",
+                generatedImage: target.src || "",
+                references: [],
+                model: "",
+                ratio: "16:9",
+                quality: "1k",
+                steps: 1,
+              },
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "e1-2",
+            source: "1",
+            target: "2",
+          },
+        ],
+      }),
+    });
+    await window.$pluginFn.assets.update({ id: target.id, flowId: target.flowId });
+  }
+  const res = await window.$pluginFn.ui.openEditor({
+    flowId: target.flowId!,
+    selectorMode: ["IMAGE"],
+  });
+  if (!res) return;
+  if (res.type == "IMAGE") {
+    await window.$pluginFn.assets.updateAssetsUrl(target.id, res.value.url, target.flowId!);
+    target.src = res.value.url;
+    data.value = { ...data.value! };
+  }
 }
-
-
 </script>
 
 <script lang="ts">

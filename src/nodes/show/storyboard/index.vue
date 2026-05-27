@@ -14,53 +14,46 @@
         </div>
       </div>
       <div class="grid">
-        <t-tooltip
-          v-for="(item, index) in data.storyboard"
-          :key="item.id ?? index"
-          placement="bottom"
-          :show-arrow="false"
-          destroy-on-close
-          overlay-class-name="storyboardTip">
-          <template #content>
-            <div class="tipContent">
-              <div class="tipTitle">{{ item.videoDesc }}</div>
-              <div class="tipPrompt">{{ item.prompt }}</div>
-              <div v-if="item.duration" class="tipMeta">时长：{{ item.duration }}s</div>
-              <div v-if="item.shouldGenerateImage" class="tipMeta">需生成配图</div>
-              <div v-if="item.reason && item.state === '生成失败'" class="tipError">{{ item.reason }}</div>
-            </div>
-          </template>
-          <div class="cellWrap">
-            <div class="cell" :class="{ selected: selected.has(item.id ?? index) }" @click="toggleSelect(item.id ?? index)">
-              <div class="imgArea" @click.stop="item.src && showPreview(item.src)">
-                <t-image v-if="item.src" :src="item.src" fit="scale-down" class="cellImg">
-                  <template #loading><t-loading size="small" /></template>
-                </t-image>
-                <div v-else class="cellEmpty">
-                  <t-icon name="image-error" size="20px" />
-                </div>
+        <div v-for="(item, index) in data.storyboard" :key="item.id ?? index" class="cellWrap">
+          <div class="hoverTip">
+            <div class="tipTitle">{{ item.videoDesc }}</div>
+            <div v-if="item.prompt" class="tipPrompt">{{ item.prompt }}</div>
+            <div v-if="item.duration" class="tipMeta">时长：{{ item.duration }}s</div>
+            <div v-if="item.shouldGenerateImage" class="tipMeta">需生成配图</div>
+            <div v-if="item.reason && item.state === '生成失败'" class="tipError">{{ item.reason }}</div>
+          </div>
+          <div class="cell" :class="{ selected: selected.has(item.id ?? index) }" @click="toggleSelect(item.id ?? index)">
+            <div class="imgArea" @click.stop="item.src && showPreview(item.src)">
+              <t-image v-if="item.src" :src="item.src" fit="scale-down" class="cellImg">
+                <template #loading><t-loading size="small" /></template>
+              </t-image>
+              <div v-else class="cellEmpty">
+                <t-icon name="image-error" size="20px" />
               </div>
-              <div class="cellOverlay">
-                <t-checkbox :checked="selected.has(item.id ?? index)" class="cellCheck" @click.stop @change="toggleSelect(item.id ?? index)" />
-                <t-tag size="small" :theme="stateTheme[item.state]" class="stateTag">{{ item.state }}</t-tag>
-              </div>
-              <div class="caption">
-                <span class="captionText">{{ item.videoDesc }}</span>
-                <t-button size="small" variant="text" class="editBtn" @click.stop="openEdit(index)">
-                  <template #icon><t-icon name="edit" size="11px" /></template>
-                </t-button>
+              <div class="imgEditBtn" @click.stop="editImage(index)">
+                <t-icon name="edit" size="11px" />
               </div>
             </div>
-            <div class="insertBtn" @click.stop="insertAfter(index)">
-              <t-icon name="add" size="10px" />
+            <div class="cellOverlay">
+              <t-checkbox :checked="selected.has(item.id ?? index)" class="cellCheck" @click.stop @change="toggleSelect(item.id ?? index)" />
+              <t-tag size="small" :theme="stateTheme[item.state]" class="stateTag">{{ item.state }}</t-tag>
+            </div>
+            <div class="caption">
+              <span class="captionText">{{ item.videoDesc }}</span>
+              <t-button size="small" variant="text" class="editBtn" @click.stop="openEdit(index)">
+                <template #icon><t-icon name="edit" size="11px" /></template>
+              </t-button>
             </div>
           </div>
-        </t-tooltip>
+          <div class="insertBtn" @click.stop="insertAfter(index)">
+            <t-icon name="add" size="10px" />
+          </div>
+        </div>
       </div>
     </template>
 
     <teleport to="body">
-      <t-image-viewer v-model:visible="preview.visible" :images="preview.images" />
+      <t-image-viewer v-if="preview.visible" v-model:visible="preview.visible" :images="preview.images" />
     </teleport>
 
     <t-dialog v-model:visible="edit.visible" header="编辑分镜" attach="body" width="480px" destroy-on-close @confirm="saveEdit">
@@ -124,6 +117,100 @@ function saveEdit() {
   edit.visible = false;
 }
 
+// --- 编辑图片 ---
+async function editImage(index: number) {
+  const item = storyboard.value[index];
+  if (!item || !data.value) return;
+
+  let needBuild = !item.flowId;
+  if (item.flowId) {
+    const res = await window.$pluginFn.flow.list({ id: item.flowId });
+    if (!res.data?.data?.length) needBuild = true;
+  }
+
+  if (needBuild) {
+    item.flowId = Date.now();
+
+    // 拉取关联资产
+    const assocIds = item.associateAssetsIds ?? [];
+    const assocAssets: Array<{ src: string; name: string }> = [];
+    if (assocIds.length > 0) {
+      const results = await Promise.all(assocIds.map((id) => window.$pluginFn.assets.item(id)));
+      for (const res of results) {
+        if (res.code === 200 && res.data) {
+          const d = res.data as any;
+          assocAssets.push({ src: d.src ?? "", name: d.name ?? "" });
+        }
+      }
+    }
+
+    // 为关联资产构建 image 节点
+    const imageNodeDefs = assocAssets.map((asset, i) => ({
+      nodeId: `img_${i + 1}`,
+      src: asset.src,
+      name: asset.name,
+    }));
+
+    const imageNodes = imageNodeDefs.map((def, i) => ({
+      id: def.nodeId,
+      type: "pluginNode",
+      position: { x: 200, y: 100 + i * 400 },
+      data: {
+        pluginId: "toonflowPlugin:image",
+        data: { src: def.src, fileName: def.name },
+      },
+    }));
+
+    const imageEdges = imageNodeDefs.map((def, i) => ({
+      id: `e_img${i + 1}_generate`,
+      type: "edge",
+      source: def.nodeId,
+      sourceHandle: `${def.nodeId}__output`,
+      target: "generate",
+      targetHandle: `generate__input`,
+    }));
+
+    await window.$pluginFn.flow.insert({
+      id: item.flowId,
+      flowData: JSON.stringify({
+        nodes: [
+          ...imageNodes,
+          {
+            id: "generate",
+            type: "pluginNode",
+            position: { x: 600, y: 100 },
+            data: {
+              pluginId: "toonflowPlugin:imageGenerate",
+              data: {
+                prompt: item.prompt || "",
+                generatedImage: item.src || "",
+                references: [],
+                model: "",
+                ratio: "16:9",
+                quality: "1k",
+                steps: 1,
+              },
+            },
+          },
+        ],
+        edges: imageEdges,
+      }),
+    });
+    // 新建 flow 后立即持久化 flowId，防止用户取消时重复创建
+    data.value.storyboard[index].flowId = item.flowId;
+    data.value = { ...data.value };
+  }
+
+  const res = await window.$pluginFn.ui.openEditor({
+    flowId: item.flowId!,
+    selectorMode: ["IMAGE"],
+  });
+  if (!res || res.type !== "IMAGE") return;
+
+  data.value.storyboard[index].src = res.value.url;
+  data.value = { ...data.value };
+}
+
 // --- 操作 ---
 function generate() {
   console.log("%c generate storyboard", "background:#465975", [...selected.value]);
@@ -178,7 +265,6 @@ export const defaultData: Data = { storyboard: [] };
 .storyboard {
   width: 550px;
   padding: 12px;
-  box-sizing: border-box;
 
   .selBar {
     display: flex;
@@ -211,6 +297,55 @@ export const defaultData: Data = { storyboard: [] };
 
       &:hover .insertBtn {
         opacity: 1;
+      }
+
+      &:hover .hoverTip {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .hoverTip {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(30, 30, 30, 0.88);
+        color: #fff;
+        border-radius: 5px;
+        padding: 7px 9px;
+        z-index: 20;
+        min-width: 140px;
+        max-width: 50vw;
+        width: 50vw;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.15s;
+        white-space: normal;
+        word-break: break-all;
+
+        .tipTitle {
+          font-size: 13px;
+          font-weight: 500;
+          margin-bottom: 4px;
+        }
+
+        .tipPrompt {
+          font-size: 12px;
+          color: #bbb;
+          margin-bottom: 4px;
+        }
+
+        .tipMeta {
+          font-size: 11px;
+          color: #999;
+        }
+
+        .tipError {
+          font-size: 12px;
+          color: #e34d59;
+          margin-top: 4px;
+        }
       }
 
       .insertBtn {
@@ -257,6 +392,29 @@ export const defaultData: Data = { storyboard: [] };
         .imgArea {
           flex: 1;
           cursor: zoom-in;
+          position: relative;
+
+          &:hover .imgEditBtn {
+            opacity: 1;
+          }
+
+          .imgEditBtn {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.45);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 2;
+          }
 
           .cellImg {
             width: 100%;
@@ -330,36 +488,6 @@ export const defaultData: Data = { storyboard: [] };
           }
         }
       }
-    }
-  }
-}
-</style>
-
-<style>
-.storyboardTip {
-  max-width: 220px;
-
-  .tipContent {
-    .tipTitle {
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-    .tipPrompt {
-      font-size: 12px;
-      color: #aaa;
-      word-break: break-all;
-      margin-bottom: 4px;
-    }
-    .tipMeta {
-      font-size: 11px;
-      color: #bbb;
-    }
-    .tipError {
-      font-size: 12px;
-      color: #e34d59;
-      word-break: break-all;
-      margin-top: 4px;
     }
   }
 }

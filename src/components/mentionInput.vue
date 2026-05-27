@@ -1,6 +1,13 @@
 <template>
   <div class="mentionInput">
-    <div ref="editorRef" class="mentionEditor" contenteditable="true" :placeholder="placeholder" @input="syncText" @keydown="handleKeydown" />
+    <div
+      ref="editorRef"
+      class="mentionEditor"
+      contenteditable="true"
+      :placeholder="placeholder"
+      @input="syncText"
+      @keydown="handleKeydown"
+      spellcheck="false" />
   </div>
 </template>
 
@@ -42,7 +49,7 @@ const toHtml = (vnode: ReturnType<typeof h>): string => {
 const renderTag = (d: MentionItem) =>
   h("span", { class: "mentionTag", contenteditable: "false", "data-id": d.id, "data-type": d.type }, [
     d.thumb ? h("img", { class: "mentionTagIcon", src: d.thumb, alt: d.label }) : null,
-    d.label,
+    h("span", { class: "mentionTagLabel" }, d.label),
   ]);
 
 const initTribute = () => {
@@ -58,7 +65,7 @@ const initTribute = () => {
           ...[item.original.thumb ? h("img", { class: "mentionThumb", src: item.original.thumb, alt: item.original.label }) : null],
           h("span", { class: "mentionLabel" }, item.original.label),
           h("span", { class: "mentionType" }, item.original.type),
-        ]),
+        ])
       ),
     selectTemplate: (item) => (item ? toHtml(renderTag(item.original)) : ""),
     noMatchTemplate: () => toHtml(h("li", { class: "mentionNoMatch" }, "无匹配结果")),
@@ -78,10 +85,14 @@ const extractText = (el: HTMLElement): string => {
   return r;
 };
 
+let syncingFromUser = false;
+
 const syncText = () => {
   if (!editorRef.value) return;
+  syncingFromUser = true;
   text.value = extractText(editorRef.value);
   emit("update:text", text.value);
+  syncingFromUser = false;
 };
 
 const handleKeydown = (e: KeyboardEvent) => {
@@ -96,13 +107,13 @@ const handleKeydown = (e: KeyboardEvent) => {
       ? sc === editorRef.value
         ? sc.childNodes[so - 1]
         : so === 0
-          ? sc.previousSibling
-          : null
+        ? sc.previousSibling
+        : null
       : sc === editorRef.value
-        ? sc.childNodes[so]
-        : so === (sc.textContent?.length ?? 0)
-          ? sc.nextSibling
-          : null;
+      ? sc.childNodes[so]
+      : so === (sc.textContent?.length ?? 0)
+      ? sc.nextSibling
+      : null;
 
   if (target instanceof HTMLElement && target.classList.contains("mentionTag")) {
     e.preventDefault();
@@ -111,7 +122,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 const setText = (value: string) => {
   if (!editorRef.value || !value) return;
@@ -164,9 +175,17 @@ onMounted(() => {
   if (text.value) nextTick(() => setText(text.value!));
 });
 
+watch(text, (val) => {
+  if (syncingFromUser || !editorRef.value) return;
+  const current = extractText(editorRef.value);
+  if ((val ?? "") !== current) {
+    nextTick(() => setText(val ?? ""));
+  }
+});
+
 watch(
   () => props.list,
-  (v) => tribute?.append(0, v, true),
+  (v) => tribute?.append(0, v, true)
 );
 
 onBeforeUnmount(() => {
@@ -222,6 +241,14 @@ defineExpose({
       cursor: default;
       user-select: none;
       vertical-align: middle;
+      max-width: 160px;
+
+      .mentionTagLabel {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
 
       .mentionTagIcon {
         width: 18px;
@@ -278,6 +305,10 @@ defineExpose({
           font-size: 14px;
           color: #303133;
           flex: 1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .mentionType {

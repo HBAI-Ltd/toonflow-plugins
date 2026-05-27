@@ -28,7 +28,7 @@ declare module 'vue' {
     MemoryConfig: typeof import('./../components/setting/components/memoryConfig.vue')['default']
     MentionInput: typeof import('./../src/components/mentionInput.vue')['default']
     ModelMap: typeof import('./../components/setting/components/modelMap.vue')['default']
-    ModelSelect: typeof import('./../components/modelSelect.vue')['default']
+    ModelSelect: typeof import('./../src/components/modelSelect.vue')['default']
     OtherConfig: typeof import('./../components/setting/components/otherConfig.vue')['default']
     PromptEditor: typeof import('./../components/promptEditor.vue')['default']
     PromptManage: typeof import('./../components/setting/components/promptManage.vue')['default']

@@ -6,6 +6,7 @@ export type HANDLE_TYPE = HANDLE_TYPE_PRIMITIVE | HANDLE_TYPE_MEDIA | HANDLE_TYP
 
 export interface ImageData {
   url: string;
+  name?: string;
   width?: number;
   height?: number;
   format?: "png" | "jpg" | "webp" | "gif";
@@ -13,12 +14,14 @@ export interface ImageData {
 
 export interface MaskData {
   url: string;
+  name?: string;
   width?: number;
   height?: number;
 }
 
 export interface AudioData {
   url: string;
+  name?: string;
   duration?: number;
   sampleRate?: number;
   format?: "mp3" | "wav" | "flac" | "ogg";
@@ -26,6 +29,7 @@ export interface AudioData {
 
 export interface VideoData {
   url: string;
+  name?: string;
   duration?: number;
   fps?: number;
   width?: number;
