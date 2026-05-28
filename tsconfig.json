@@ -9,7 +9,9 @@
     "jsx": "preserve",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "types": ["node", "three"],
+    "types": [
+      "node"
+    ],
     "lib": [
       "DOM",
       "ESNext",

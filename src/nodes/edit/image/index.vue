@@ -1,6 +1,6 @@
 <template>
   <div class="imageNode">
-    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="isValidConnection" />
+    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="sdk.isValidConnection" />
 
     <div class="uploadArea" @click="triggerUpload">
       <template v-if="data!.src">
@@ -40,15 +40,26 @@
 <script setup lang="ts">
 import { MessagePlugin } from "tdesign-vue-next";
 import type { DropdownOption } from "tdesign-vue-next/es/dropdown";
-import { Handle, Position, type ValidConnectionFunc } from "@vue-flow/core";
-import checkConnection from "#/core/checkConnection";
-import { useHandleId } from "#/core/useHandleId";
+import { Handle, Position } from "@vue-flow/core";
+import { useToonflowUMD } from "#/core";
 
 const data = defineModel<Data>("DATA");
 
 const fileInputRef = ref<HTMLInputElement>();
 
-const isValidConnection: ValidConnectionFunc = (connection, elements) => checkConnection({ connection, elements }).canConnect;
+const sdk = useToonflowUMD();
+const outputHandelId = sdk.handleId("output");
+
+sdk.registerHandles(
+  computed<HANDLEDOPT>(() => ({
+    outputs: {
+      [outputHandelId]: {
+        type: ["IMAGE"],
+        value: data.value?.src ? { url: data.value.src, name: data.value.fileName || undefined } : null,
+      },
+    },
+  })),
+);
 
 const options: DropdownOption[] = [
   { content: "选择资产", value: 1 },
@@ -59,7 +70,7 @@ const options: DropdownOption[] = [
 
 async function clickHandler(opt: DropdownOption) {
   if (opt.value == 1) {
-    const [asset] = await window.$pluginFn.ui.openAssetManager({
+    const [asset] = await sdk.fn.ui.openAssetManager({
       multiple: false,
       types: ["role", "tool", "scene", "clip"],
       clipMediaTypes: ["image"],
@@ -68,7 +79,7 @@ async function clickHandler(opt: DropdownOption) {
     data.value.src = asset.src;
     data.value.fileName = asset.name;
   } else if (opt.value == 2) {
-    const [item] = await window.$pluginFn.ui.openStoryboardImageCheck({ multiple: false });
+    const [item] = await sdk.fn.ui.openStoryboardImageCheck({ multiple: false });
     if (!item || !data.value) return;
     data.value.src = item.imageUrl;
     data.value.fileName = item.name;
@@ -101,19 +112,6 @@ async function pasteFromClipboard() {
   MessagePlugin.warning("剪切板中没有图片");
 }
 
-const outputHandelId = useHandleId("output");
-
-const HANDLEDOPT = ref<HANDLEDOPT>({
-  outputs: {
-    [outputHandelId]: { type: ["IMAGE"], value: null },
-  },
-});
-
-watchEffect(() => {
-  const output = HANDLEDOPT.value.outputs![outputHandelId];
-  output.value = data.value?.src ? { url: data.value.src, name: data.value.fileName || undefined } : null;
-});
-
 function triggerUpload() {
   fileInputRef.value?.click();
 }
@@ -135,12 +133,10 @@ function clearFile() {
   data.value.fileName = "";
   if (fileInputRef.value) fileInputRef.value.value = "";
 }
-
-defineExpose({ HANDLEDOPT });
 </script>
 
 <script lang="ts">
-import type { HANDLEDOPT } from "#/core/nodeType";
+import type { HANDLEDOPT } from "#/core";
 import logo from "@/assets/logo.jpg";
 
 export const icon = logo;

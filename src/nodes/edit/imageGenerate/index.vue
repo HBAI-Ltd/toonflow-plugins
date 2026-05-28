@@ -1,20 +1,20 @@
 <template>
   <div class="image" ref="triggerRef" @click="popupOpen = !popupOpen">
-    <Handle :id="inputHandelId" type="target" :position="Position.Left" :is-valid-connection="isValidConnection" />
+    <Handle :id="inputHandelId" type="target" :position="Position.Left" :is-valid-connection="sdk.isValidConnection" />
     <img v-if="data?.generatedImage" :src="data.generatedImage" class="mainImg" alt="" />
     <div v-else class="imgPlaceholder">
       <t-empty type="maintenance" title="没有图片" />
     </div>
-    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="isValidConnection" />
+    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="sdk.isValidConnection" />
     <div v-show="popupOpen" class="imageNodeFloat" @click.stop @mousedown.stop @wheel.stop>
-      <div class="refList f">
-        <template v-if="mediaInputs.length">
-          <div class="item" v-for="(entry, i) in mediaInputs" :key="i">
-            <img v-if="(entry.type === 'IMAGE' || entry.type === 'VIDEO') && entry.value?.url" :src="entry.value.url" class="smallImage" alt="" />
-            <t-icon v-else-if="entry.type === 'AUDIO'" name="sound" size="24px" />
-          </div>
-        </template>
-        <div v-else class="refListEmpty">
+      <VueDraggable v-if="mediaInputs.length" v-model="orderedIndices" :animation="150" class="refList f">
+        <div class="item" v-for="origIdx in orderedIndices" :key="origIdx">
+          <img v-if="mediaInputs[origIdx]?.value?.url" :src="mediaInputs[origIdx].value.url" class="smallImage" alt="" />
+          <div v-else class="itemEmpty"><t-icon name="image" size="24px" /></div>
+        </div>
+      </VueDraggable>
+      <div v-else class="refList f">
+        <div class="refListEmpty">
           <t-icon name="image" size="20px" />
         </div>
       </div>
@@ -41,7 +41,7 @@
               <template #icon><i-arrow-up /></template>
             </t-button>
           </t-popup>
-          <t-popup :content="$t('workbench.production.save')" v-if="selectorTypes.includes('IMAGE')">
+          <t-popup :content="$t('workbench.production.save')" v-if="sdk.selector?.types.includes('IMAGE')">
             <t-button theme="primary" size="small" class="keepBtn" :disabled="generating" :loading="generating" @click="handleKeep">
               <template #icon><i-save /></template>
             </t-button>
@@ -53,22 +53,20 @@
 </template>
 
 <script setup lang="ts">
-import { Handle, Position, useVueFlow, type ValidConnectionFunc } from "@vue-flow/core";
+import { Handle, Position, useVueFlow } from "@vue-flow/core";
+import { VueDraggable } from "vue-draggable-plus";
 import mentionInput from "@/components/mentionInput.vue";
 import modelSelect from "@/components/modelSelect.vue";
-import checkConnection from "#/core/checkConnection";
-import { useInputHandleValue } from "#/core/useInputHandle";
-import { useHandleId } from "#/core/useHandleId";
+import { useToonflowUMD } from "#/core";
 
-const selectorTypes = inject("selectorTypes") as HANDLE_TYPE[];
-const nodeSelector = inject("nodeSelector") as <T extends HANDLE_TYPE>(data: HANDLEDATA<T>) => void;
+const sdk = useToonflowUMD();
 
 function handleKeep() {
-  if (!data.value?.generatedImage) return;
-  nodeSelector({ type: "IMAGE", value: { url: data.value.generatedImage } });
+  if (!data.value?.generatedImage || !sdk.selector) return;
+  sdk.selector.onSelect({ type: "IMAGE", value: { url: data.value.generatedImage } });
 }
 
-const { viewport } = useVueFlow(inject("flowId"));
+const { viewport } = useVueFlow(sdk.flowId);
 
 const generating = ref(false);
 
@@ -77,27 +75,34 @@ const data = defineModel<Data>("DATA");
 const triggerRef = ref<HTMLElement | null>(null);
 const popupOpen = ref(false);
 
-const inputHandelId = useHandleId("input");
-const outputHandelId = useHandleId("output");
+const inputHandelId = sdk.handleId("input");
+const outputHandelId = sdk.handleId("output");
 
 // values/types 均为数组，支持 N 连 1
-const mediaInputs = useInputHandleValue<ImageData | VideoData | AudioData>(inputHandelId);
+const mediaInputs = sdk.inputValue<ImageData>(inputHandelId);
 
-const fileList = computed(() => {
-  const labelMap: Record<string, string> = { IMAGE: "图片", VIDEO: "视频", AUDIO: "音频" };
-  return mediaInputs.value.flatMap(({ value: val, type: t }, i) => {
-    if (!val?.url) return [];
-    const typeStr = t ?? "IMAGE";
-    return [
-      {
-        id: `${inputHandelId}_${i}`,
-        label: val.name || decodeURIComponent(val.url.split("/").pop() || "") || labelMap[typeStr] || typeStr,
-        type: typeStr,
-        thumb: typeStr !== "AUDIO" ? val.url : "",
-      },
-    ];
-  });
-});
+const orderedIndices = ref<number[]>([]);
+
+watch(
+  () => mediaInputs.value.length,
+  (len) => {
+    orderedIndices.value = Array.from({ length: len }, (_, i) => i);
+  },
+  { immediate: true }
+);
+
+const sortedMediaInputs = computed(() =>
+  orderedIndices.value.map((i) => mediaInputs.value[i]).filter(Boolean)
+);
+
+const fileList = computed(() =>
+  sortedMediaInputs.value.map(({ value: val }, i) => ({
+    id: `${inputHandelId}_${i}`,
+    label: `图${i + 1}`,
+    type: "IMAGE",
+    thumb: val?.url ?? "",
+  }))
+);
 
 const prompt = computed({
   get: () => data.value?.prompt,
@@ -112,7 +117,7 @@ async function handleGenerate() {
   if (!data.value?.ratio) return window.$message.error($t("workbench.production.editImage.selectRatio"));
   generating.value = true;
   try {
-    const { url } = await window.$pluginFn.ai.generateFlowImage({
+    const { url } = await sdk.fn.ai.generateFlowImage({
       references: data.value?.references.map((i) => i.image).filter(Boolean),
       model: data.value?.model,
       quality: data.value?.quality,
@@ -144,17 +149,6 @@ function onDocMousedown(e: MouseEvent) {
 onMounted(() => document.addEventListener("mousedown", onDocMousedown, true));
 onUnmounted(() => document.removeEventListener("mousedown", onDocMousedown, true));
 
-const isValidConnection: ValidConnectionFunc = (connection, elements) => checkConnection({ connection, elements, selfLoop: true }).canConnect;
-
-const HANDLEDOPT = ref<HANDLEDOPT>({
-  inputs: {
-    [inputHandelId]: ["IMAGE"],
-  },
-  outputs: {
-    [outputHandelId]: { type: ["IMAGE"] },
-  },
-});
-
 // 同步 fileList 到 data.references
 watch(
   fileList,
@@ -164,20 +158,23 @@ watch(
   { immediate: true }
 );
 
-// 同步 generatedImage 到 output value，使下游节点能通过 useInputHandleValue 读取
-watch(
-  () => data.value?.generatedImage,
-  (src) => {
-    HANDLEDOPT.value.outputs![outputHandelId].value = src ? { url: src } : null;
-  },
-  { immediate: true }
+sdk.registerHandles(
+  computed<HANDLEDOPT>(() => ({
+    inputs: {
+      [inputHandelId]: ["IMAGE"],
+    },
+    outputs: {
+      [outputHandelId]: {
+        type: ["IMAGE"],
+        value: data.value?.generatedImage ? { url: data.value.generatedImage } : null,
+      },
+    },
+  })),
 );
-
-defineExpose({ HANDLEDOPT });
 </script>
 
 <script lang="ts">
-import type { HANDLEDOPT, ImageData, VideoData, AudioData, HANDLE_TYPE, HANDLEDATA } from "#/core/nodeType";
+import type { HANDLEDOPT, ImageData } from "#/core";
 import logo from "@/assets/logo.jpg";
 
 export const icon = logo;
@@ -247,10 +244,25 @@ export const defaultData: Data = {
       align-items: center;
 
       .item {
+        cursor: grab;
+        user-select: none;
+        &.sortable-ghost {
+          opacity: 0.4;
+        }
         .smallImage {
           width: 40px;
           height: 40px;
           border-radius: 8px;
+        }
+        .itemEmpty {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          background: var(--td-brand-color-light);
+          color: var(--td-brand-color);
         }
       }
 

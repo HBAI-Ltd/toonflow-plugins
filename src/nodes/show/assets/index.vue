@@ -47,12 +47,14 @@
 
 <script setup lang="ts">
 import { DialogPlugin } from "tdesign-vue-next";
+import { useToonflowUMD } from "#/core";
+
+const { fn } = useToonflowUMD();
 
 const data = defineModel<Data>("DATA");
 
 const previewVisible = ref(false);
 const previewImages = ref<string[]>([]);
-/** 给图片 URL 追加 `size` 查询参数,size 为百分比 (1-100),不传则返回原图 */
 function withSize(src: string, size?: number) {
   if (!src || !size) return src;
   return src + (src.includes("?") ? "&" : "?") + "size=" + size;
@@ -107,7 +109,7 @@ async function remove(asset: Asset, derive?: DeriveAsset) {
 
   const ids = derive ? derive.id : [asset.id, ...(asset.derive?.map((d) => d.id) ?? [])];
   try {
-    const res = await window.$pluginFn.assets.del(ids);
+    const res = await fn.assets.del(ids);
     if (res.code !== 200) {
       window.$message?.error(res.message || "删除失败");
       return;
@@ -130,13 +132,13 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
 
   let needBuild = !target.flowId;
   if (target.flowId) {
-    const {data} = await window.$pluginFn.flow.list({ id: target.flowId });
+    const {data} = await fn.flow.list({ id: target.flowId });
     if (!data.data?.length) needBuild = true;
   }
 
   if (needBuild) {
     target.flowId = Date.now();
-    await window.$pluginFn.flow.insert({
+    await fn.flow.insert({
       id: target.flowId,
       flowData: JSON.stringify({
         nodes: [
@@ -167,15 +169,15 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
         ],
       }),
     });
-    await window.$pluginFn.assets.update({ id: target.id, flowId: target.flowId });
+    await fn.assets.update({ id: target.id, flowId: target.flowId });
   }
-  const res = await window.$pluginFn.ui.openEditor({
+  const res = await fn.ui.openEditor({
     flowId: target.flowId!,
     selectorMode: ["IMAGE"],
   });
   if (!res) return;
   if (res.type == "IMAGE") {
-    await window.$pluginFn.assets.updateAssetsUrl(target.id, res.value.url, target.flowId!);
+    await fn.assets.updateAssetsUrl(target.id, res.value.url, target.flowId!);
     target.src = res.value.url;
     data.value = { ...data.value! };
   }

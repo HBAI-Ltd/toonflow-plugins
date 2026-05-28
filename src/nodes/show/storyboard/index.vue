@@ -76,17 +76,19 @@
 </template>
 
 <script setup lang="ts">
+import { useToonflowUMD } from "#/core";
+
+const { fn } = useToonflowUMD();
+
 const data = defineModel<Data>("DATA");
 const storyboard = computed(() => data.value?.storyboard ?? []);
 
-// --- 预览 ---
 const preview = reactive({ visible: false, images: [] as string[] });
 function showPreview(src: string) {
   preview.images = [src];
   preview.visible = true;
 }
 
-// --- 选择 ---
 const selected = shallowRef(new Set<number | string>());
 const allSelected = computed(() => storyboard.value.length > 0 && selected.value.size === storyboard.value.length);
 const someSelected = computed(() => selected.value.size > 0 && !allSelected.value);
@@ -102,7 +104,6 @@ function clearSelect() {
   selected.value = new Set();
 }
 
-// --- 编辑 ---
 const edit = reactive({ visible: false, index: -1, form: null as (StoryboardItem & { src: string }) | null });
 
 function openEdit(index: number) {
@@ -117,25 +118,23 @@ function saveEdit() {
   edit.visible = false;
 }
 
-// --- 编辑图片 ---
 async function editImage(index: number) {
   const item = storyboard.value[index];
   if (!item || !data.value) return;
 
   let needBuild = !item.flowId;
   if (item.flowId) {
-    const res = await window.$pluginFn.flow.list({ id: item.flowId });
+    const res = await fn.flow.list({ id: item.flowId });
     if (!res.data?.data?.length) needBuild = true;
   }
 
   if (needBuild) {
     item.flowId = Date.now();
 
-    // 拉取关联资产
     const assocIds = item.associateAssetsIds ?? [];
     const assocAssets: Array<{ src: string; name: string }> = [];
     if (assocIds.length > 0) {
-      const results = await Promise.all(assocIds.map((id) => window.$pluginFn.assets.item(id)));
+      const results = await Promise.all(assocIds.map((id) => fn.assets.item(id)));
       for (const res of results) {
         if (res.code === 200 && res.data) {
           const d = res.data as any;
@@ -144,7 +143,6 @@ async function editImage(index: number) {
       }
     }
 
-    // 为关联资产构建 image 节点
     const imageNodeDefs = assocAssets.map((asset, i) => ({
       nodeId: `img_${i + 1}`,
       src: asset.src,
@@ -170,7 +168,7 @@ async function editImage(index: number) {
       targetHandle: `generate__input`,
     }));
 
-    await window.$pluginFn.flow.insert({
+    await fn.flow.insert({
       id: item.flowId,
       flowData: JSON.stringify({
         nodes: [
@@ -196,12 +194,11 @@ async function editImage(index: number) {
         edges: imageEdges,
       }),
     });
-    // 新建 flow 后立即持久化 flowId，防止用户取消时重复创建
     data.value.storyboard[index].flowId = item.flowId;
     data.value = { ...data.value };
   }
 
-  const res = await window.$pluginFn.ui.openEditor({
+  const res = await fn.ui.openEditor({
     flowId: item.flowId!,
     selectorMode: ["IMAGE"],
   });
@@ -211,7 +208,6 @@ async function editImage(index: number) {
   data.value = { ...data.value };
 }
 
-// --- 操作 ---
 function generate() {
   console.log("%c generate storyboard", "background:#465975", [...selected.value]);
   window.$message?.info("生成功能待接入");

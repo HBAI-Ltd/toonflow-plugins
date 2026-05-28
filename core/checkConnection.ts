@@ -2,22 +2,16 @@ import { type HANDLE_TYPE, HANDLEDOPT } from "./nodeType";
 import { type ValidConnectionFunc } from "@vue-flow/core";
 
 export enum ConnectFailReason {
-  // 目标端口与源端口相同
   sameHandle = "sameHandle",
-  // 不允许自环连接
   selfLoop = "selfLoop",
-  // 端口类型不兼容
   typeMismatch = "typeMismatch",
-  // 连接方向错误（source→source 或 target→target）
   sameHandleDirection = "sameHandleDirection",
 }
 
 interface Config {
   connection: Parameters<ValidConnectionFunc>[0];
   elements?: Parameters<ValidConnectionFunc>[1];
-  /** true 时禁止自环连接，默认 true */
   selfLoop?: boolean;
-  /** true 时强制 output→input 方向，禁止 source→source 或 target→target，默认 true */
   strictDirection?: boolean;
 }
 

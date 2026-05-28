@@ -26,6 +26,10 @@
 </template>
 
 <script setup lang="ts">
+import { useToonflowUMD } from "#/core";
+
+const { fn } = useToonflowUMD();
+
 interface VendorChild {
   id: number;
   label: string;
@@ -71,7 +75,7 @@ async function onChange(value: any, { option }: any) {
   selectValue.value = value;
   selectValueLabel.value = option.label;
   if (props.changeConfig) {
-    const data = await window.$pluginFn.ai.getModelDetail(value);
+    const data = await fn.ai.getModelDetail(value);
     emit("change", value, data);
   } else {
     emit("change", value);
@@ -92,9 +96,8 @@ const titleMap = {
   text: "文本",
   video: "视频",
 };
-//获取模型选择API数据
 function handleModelChange() {
-  window.$pluginFn.ai
+  fn.ai
     .getModelList(props.type)
     .then((data) => {
       optionsData.value = data.map((group) => ({
@@ -119,7 +122,7 @@ function handleModelChange() {
     });
 }
 function getModelIcon(label?: string, value?: string) {
-  return window.$pluginFn.ai.getModelIcon(label, value);
+  return fn.ai.getModelIcon(label, value);
 }
 </script>
 

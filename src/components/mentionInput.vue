@@ -126,9 +126,17 @@ const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", 
 
 const setText = (value: string) => {
   if (!editorRef.value || !value) return;
-  const map = new Map(props.list.map((i) => [i.id, i]));
-  const ids = props.list.map((i) => i.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).sort((a, b) => b.length - a.length);
-  if (!ids.length) {
+  const idMap = new Map(props.list.map((i) => [i.id, i]));
+  const labelMap = new Map(props.list.map((i) => [i.label, i]));
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const keys = [
+    ...props.list.map((i) => i.id),
+    ...props.list.map((i) => i.label),
+  ]
+    .filter(Boolean)
+    .map(escape)
+    .sort((a, b) => b.length - a.length);
+  if (!keys.length) {
     editorRef.value.textContent = value;
     return;
   }
@@ -138,13 +146,13 @@ const setText = (value: string) => {
     if (value[i] === "@") {
       let matched: MentionItem | null = null;
       let matchLen = 0;
-      for (const id of ids) {
-        if (value.startsWith(id, i + 1)) {
-          const end = i + 1 + id.length;
-          // id 后面必须是空格或到末尾才算匹配
+      for (const key of keys) {
+        if (value.startsWith(key, i + 1)) {
+          const end = i + 1 + key.length;
+          // key 后面必须是空格或到末尾才算匹配
           if (end >= value.length || value[end] === " ") {
-            matched = map.get(id) || null;
-            matchLen = id.length + 1 + (end < value.length ? 1 : 0); // +1 跳过空格
+            matched = idMap.get(key) || labelMap.get(key) || null;
+            matchLen = key.length + 1 + (end < value.length ? 1 : 0); // +1 跳过空格
             break;
           }
         }
@@ -185,7 +193,13 @@ watch(text, (val) => {
 
 watch(
   () => props.list,
-  (v) => tribute?.append(0, v, true)
+  (v) => {
+    tribute?.append(0, v, true);
+    // 重新渲染已有 tag，让 thumb 跟随顺序变化同步更新
+    if (editorRef.value && text.value) {
+      nextTick(() => setText(text.value!));
+    }
+  }
 );
 
 onBeforeUnmount(() => {
