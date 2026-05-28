@@ -78,6 +78,26 @@
 <script setup lang="ts">
 import { useToonflowUMD } from "#/core";
 
+type StoryboardState = "未生成" | "生成中" | "已完成" | "生成失败";
+
+interface StoryboardItem {
+  id?: number;
+  duration?: number;
+  prompt: string;
+  trackId?: number;
+  associateAssetsIds?: number[];
+  src: string | null;
+  state: StoryboardState;
+  flowId?: number;
+  reason?: string;
+  videoDesc: string;
+  shouldGenerateImage: number;
+}
+
+interface Data {
+  storyboard: StoryboardItem[];
+}
+
 const { fn } = useToonflowUMD();
 
 const data = defineModel<Data>("DATA");
@@ -228,28 +248,6 @@ const stateTheme: Record<StoryboardState, "default" | "primary" | "success" | "d
   已完成: "success",
   生成失败: "danger",
 };
-</script>
-
-<script lang="ts">
-type StoryboardState = "未生成" | "生成中" | "已完成" | "生成失败";
-
-interface StoryboardItem {
-  id?: number;
-  duration?: number;
-  prompt: string;
-  trackId?: number;
-  associateAssetsIds?: number[];
-  src: string | null;
-  state: StoryboardState;
-  flowId?: number;
-  reason?: string;
-  videoDesc: string;
-  shouldGenerateImage: number;
-}
-
-interface Data {
-  storyboard: StoryboardItem[];
-}
 </script>
 
 <style lang="scss" scoped>

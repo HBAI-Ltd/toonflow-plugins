@@ -7,10 +7,21 @@
 
 <script setup lang="ts">
 import { registerTgModule } from "@/utils/trackDom";
-import type { IDomEditor, IToolbarConfig } from "@wangeditor/editor";
+import { Boot, type IDomEditor, type IToolbarConfig } from "@wangeditor/editor";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
+import markdownModule from "@wangeditor/plugin-md";
 import { marked } from "marked";
+
+if (!(globalThis as any).__toonflowMdRegistered) {
+  Boot.registerModule(markdownModule);
+  (globalThis as any).__toonflowMdRegistered = true;
+}
+
+interface Data {
+  storyboardTable: string;
+  v?: number;
+}
 
 registerTgModule();
 
@@ -56,17 +67,6 @@ function handleCreated(editor: IDomEditor) {
     }
     data.value!.v = 1;
   }
-}
-</script>
-
-<script lang="ts">
-import { Boot } from "@wangeditor/editor";
-import markdownModule from "@wangeditor/plugin-md";
-Boot.registerModule(markdownModule);
-
-interface Data {
-  storyboardTable: string;
-  v?: number;
 }
 </script>
 

@@ -41,7 +41,12 @@
 import { MessagePlugin } from "tdesign-vue-next";
 import type { DropdownOption } from "tdesign-vue-next/es/dropdown";
 import { Handle, Position } from "@vue-flow/core";
-import { useToonflowUMD } from "#/core";
+import { useToonflowUMD, type HANDLEDOPT } from "#/core";
+
+interface Data {
+  src: string;
+  fileName: string;
+}
 
 const data = defineModel<Data>("DATA");
 
@@ -132,14 +137,6 @@ function clearFile() {
   data.value.src = "";
   data.value.fileName = "";
   if (fileInputRef.value) fileInputRef.value.value = "";
-}
-</script>
-
-<script lang="ts">
-import type { HANDLEDOPT } from "#/core";
-interface Data {
-  src: string;
-  fileName: string;
 }
 </script>
 

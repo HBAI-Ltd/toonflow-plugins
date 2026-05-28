@@ -57,7 +57,17 @@ import { Handle, Position, useVueFlow } from "@vue-flow/core";
 import { VueDraggable } from "vue-draggable-plus";
 import mentionInput from "@/components/mentionInput.vue";
 import modelSelect from "@/components/modelSelect.vue";
-import { useToonflowUMD } from "#/core";
+import { useToonflowUMD, type HANDLEDOPT, type ImageData } from "#/core";
+
+interface Data {
+  generatedImage?: string;
+  references: { image: string }[];
+  prompt: string;
+  model?: string;
+  ratio?: string;
+  quality?: string;
+  steps: number;
+}
 
 const sdk = useToonflowUMD();
 
@@ -109,8 +119,6 @@ const prompt = computed({
   },
 });
 
-console.log("%c Line:112 🍏", "background:#b03734",sdk);
-
 async function handleGenerate() {
   if (!data.value?.model) return window.$message.error($t("workbench.production.editImage.selectModel"));
   if (!data.value?.quality) return window.$message.error($t("workbench.production.editImage.selectQuality"));
@@ -133,18 +141,15 @@ async function handleGenerate() {
   }
 }
 
+// 弹层 teleport 到 body 的选择器，点击命中时不关闭浮窗
+const teleportedPopupSelectors = [".tribute-container", ".t-popup"];
+
 function onDocMousedown(e: MouseEvent) {
   if (!popupOpen.value) return;
   const target = e.target as Node;
-  const inTribute = !!document.querySelector(".tribute-container")?.contains(target);
-  if (inTribute) return;
-  // t-select / t-popup 下拉层 teleport 到 body，需排除在外
-  const inTPopup =
-    !!document.querySelector(".t-popup")?.closest("body") && [...document.querySelectorAll(".t-popup")].some((el) => el.contains(target));
-  if (inTPopup) return;
-  if (!triggerRef.value?.contains(target)) {
-    popupOpen.value = false;
-  }
+  if (triggerRef.value?.contains(target)) return;
+  if (teleportedPopupSelectors.some((sel) => (target as Element).closest?.(sel))) return;
+  popupOpen.value = false;
 }
 
 onMounted(() => document.addEventListener("mousedown", onDocMousedown, true));
@@ -172,19 +177,6 @@ sdk.registerHandles(
     },
   }))
 );
-</script>
-
-<script lang="ts">
-import type { HANDLEDOPT, ImageData } from "#/core";
-interface Data {
-  generatedImage?: string;
-  references: { image: string }[];
-  prompt: string;
-  model?: string;
-  ratio?: string;
-  quality?: string;
-  steps: number;
-}
 </script>
 
 <style lang="scss" scoped>

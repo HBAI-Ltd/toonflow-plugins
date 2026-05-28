@@ -12,6 +12,11 @@ import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
 import { marked } from "marked";
 
+interface Data {
+  scriptPlan: string;
+  v?: number;
+}
+
 registerTgModule();
 
 const editorRef = shallowRef<IDomEditor>();
@@ -41,13 +46,6 @@ function handleCreated(editor: IDomEditor) {
 }
 
 
-</script>
-
-<script lang="ts">
-interface Data {
-  scriptPlan: string;
-  v?: number;
-}
 </script>
 
 <style lang="scss" scoped>

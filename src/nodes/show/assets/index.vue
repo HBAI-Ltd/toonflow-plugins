@@ -49,6 +49,40 @@
 import { DialogPlugin } from "tdesign-vue-next";
 import { useToonflowUMD } from "#/core";
 
+type AssetType = "role" | "tool" | "scene" | "clip";
+type AssetState = "未生成" | "生成中" | "已完成" | "生成失败";
+type TagTheme = "default" | "primary" | "success" | "warning" | "danger";
+
+interface DeriveAsset {
+  id: number;
+  assetsId: number | null;
+  name: string;
+  prompt: string;
+  desc: string;
+  src: string;
+  flowId?: number;
+  state: AssetState;
+  type: AssetType;
+  errorReason?: string;
+}
+
+interface Asset {
+  id: number;
+  name: string;
+  desc: string;
+  prompt: string;
+  src: string;
+  state: AssetState;
+  type: AssetType;
+  flowId?: number;
+  derive: DeriveAsset[];
+  errorReason?: string;
+}
+
+interface Data {
+  assets: Asset[];
+}
+
 const { fn } = useToonflowUMD();
 
 const data = defineModel<Data>("DATA");
@@ -181,42 +215,6 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
     target.src = res.value.url;
     data.value = { ...data.value! };
   }
-}
-</script>
-
-<script lang="ts">
-type AssetType = "role" | "tool" | "scene" | "clip";
-type AssetState = "未生成" | "生成中" | "已完成" | "生成失败";
-type TagTheme = "default" | "primary" | "success" | "warning" | "danger";
-
-interface DeriveAsset {
-  id: number;
-  assetsId: number | null;
-  name: string;
-  prompt: string;
-  desc: string;
-  src: string;
-  flowId?: number;
-  state: AssetState;
-  type: AssetType;
-  errorReason?: string;
-}
-
-interface Asset {
-  id: number;
-  name: string;
-  desc: string;
-  prompt: string;
-  src: string;
-  state: AssetState;
-  type: AssetType;
-  flowId?: number;
-  derive: DeriveAsset[];
-  errorReason?: string;
-}
-
-interface Data {
-  assets: Asset[];
 }
 </script>
 
