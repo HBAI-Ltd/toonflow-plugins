@@ -62,20 +62,12 @@ function handleCreated(editor: IDomEditor) {
 <script lang="ts">
 import { Boot } from "@wangeditor/editor";
 import markdownModule from "@wangeditor/plugin-md";
-import logo from "@/assets/logo.jpg";
-
 Boot.registerModule(markdownModule);
 
 interface Data {
   storyboardTable: string;
   v?: number;
 }
-
-export const icon = logo;
-
-export const defaultData: Data = {
-  storyboardTable: "",
-};
 </script>
 
 <style lang="scss" scoped>

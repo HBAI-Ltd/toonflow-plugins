@@ -3,6 +3,7 @@ export interface NodeManifest {
   name: string;
   sources: ("show" | "edit")[];
   description?: string;
+  icon?: string;
 }
 
 export interface ManifestType {

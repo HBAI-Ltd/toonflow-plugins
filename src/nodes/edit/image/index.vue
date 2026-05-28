@@ -137,19 +137,10 @@ function clearFile() {
 
 <script lang="ts">
 import type { HANDLEDOPT } from "#/core";
-import logo from "@/assets/logo.jpg";
-
-export const icon = logo;
-
 interface Data {
   src: string;
   fileName: string;
 }
-
-export const defaultData: Data = {
-  src: "",
-  fileName: "",
-};
 </script>
 
 <style lang="scss" scoped>

@@ -1,5 +1,5 @@
 import { build, preview, type PreviewServer, type Rollup } from "vite";
-import { resolve, dirname } from "path";
+import { resolve, dirname, basename } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import fs from "fs";
 import { createHash } from "crypto";
@@ -66,17 +66,43 @@ async function runOnce() {
     hashes.clear();
     for (const [k, v] of nextHashes) hashes.set(k, v);
 
+    const iconDir = resolve(outDir, "icon");
+    fs.rmSync(iconDir, { recursive: true, force: true });
+    const iconBySource = new Map<string, string>();
+    const nodeIconOut: Record<string, string> = {};
+    for (const n of names) {
+      const iconSrc = manifest.nodes[n].icon;
+      if (!iconSrc) continue;
+      const absSrc = resolve(rootDir, iconSrc);
+      if (!fs.existsSync(absSrc)) {
+        console.warn(`[build] 节点 ${n} 的 icon 不存在: ${iconSrc}`);
+        continue;
+      }
+      let outName = iconBySource.get(absSrc);
+      if (!outName) {
+        outName = basename(absSrc);
+        const used = new Set(iconBySource.values());
+        while (used.has(outName)) outName = `${n}_${basename(absSrc)}`;
+        if (!fs.existsSync(iconDir)) fs.mkdirSync(iconDir, { recursive: true });
+        fs.copyFileSync(absSrc, resolve(iconDir, outName));
+        iconBySource.set(absSrc, outName);
+      }
+      nodeIconOut[n] = `icon/${outName}`;
+    }
+
     fs.writeFileSync(
       resolve(outDir, "manifest.json"),
       JSON.stringify(
         {
           ...manifest,
-          nodes: Object.fromEntries(names.map((n) => [n, { ...manifest.nodes[n], path: `${n}.umd.js` }])),
+          nodes: Object.fromEntries(
+            names.map((n) => [n, { ...manifest.nodes[n], path: `${n}.umd.js`, icon: nodeIconOut[n] }]),
+          ),
           buildTime: Date.now(),
         },
         null,
-        2
-      )
+        2,
+      ),
     );
 
     if (isWatch && !previewServer) {

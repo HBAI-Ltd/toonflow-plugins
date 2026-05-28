@@ -91,9 +91,7 @@ watch(
   { immediate: true }
 );
 
-const sortedMediaInputs = computed(() =>
-  orderedIndices.value.map((i) => mediaInputs.value[i]).filter(Boolean)
-);
+const sortedMediaInputs = computed(() => orderedIndices.value.map((i) => mediaInputs.value[i]).filter(Boolean));
 
 const fileList = computed(() =>
   sortedMediaInputs.value.map(({ value: val }, i) => ({
@@ -111,6 +109,8 @@ const prompt = computed({
   },
 });
 
+console.log("%c Line:112 🍏", "background:#b03734",sdk);
+
 async function handleGenerate() {
   if (!data.value?.model) return window.$message.error($t("workbench.production.editImage.selectModel"));
   if (!data.value?.quality) return window.$message.error($t("workbench.production.editImage.selectQuality"));
@@ -123,6 +123,7 @@ async function handleGenerate() {
       quality: data.value?.quality,
       ratio: data.value?.ratio,
       prompt: data.value?.prompt,
+      projectId: sdk.projectId?.value as number,
     });
     data.value!.generatedImage = url;
   } catch (e) {
@@ -169,16 +170,12 @@ sdk.registerHandles(
         value: data.value?.generatedImage ? { url: data.value.generatedImage } : null,
       },
     },
-  })),
+  }))
 );
 </script>
 
 <script lang="ts">
 import type { HANDLEDOPT, ImageData } from "#/core";
-import logo from "@/assets/logo.jpg";
-
-export const icon = logo;
-
 interface Data {
   generatedImage?: string;
   references: { image: string }[];
@@ -188,16 +185,6 @@ interface Data {
   quality?: string;
   steps: number;
 }
-
-export const defaultData: Data = {
-  prompt: "",
-  model: "",
-  ratio: "16:9",
-  quality: "1K",
-  generatedImage: "",
-  references: [],
-  steps: 1,
-};
 </script>
 
 <style lang="scss" scoped>

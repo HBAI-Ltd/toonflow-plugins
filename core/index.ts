@@ -22,6 +22,8 @@ export interface ToonflowHost {
   language: Ref<string>;
   themeMode: Ref<ThemeMode>;
   theme: Ref<ResolvedTheme>;
+  episodesId?: Ref<string | number | undefined>;
+  projectId?: Ref<string | number | undefined>;
   fn: PluginFn;
 }
 
@@ -67,8 +69,7 @@ export function useToonflowUMD() {
     });
   }
 
-  const isValidConnection: ValidConnectionFunc = (connection, elements) =>
-    checkConnection({ connection, elements }).canConnect;
+  const isValidConnection: ValidConnectionFunc = (connection, elements) => checkConnection({ connection, elements }).canConnect;
 
   function registerHandles(opt: MaybeRefOrGetter<HANDLEDOPT>) {
     watchEffect(() => {
@@ -86,6 +87,8 @@ export function useToonflowUMD() {
     language: host.language,
     themeMode: host.themeMode,
     theme: host.theme,
+    episodesId: host.episodesId,
+    projectId:host.projectId,
     handleId: localHandleId,
     inputValue,
     isValidConnection,
@@ -176,6 +179,7 @@ export interface GenerateFlowImageParams {
   ratio: string;
   prompt?: string;
   references?: string[];
+  projectId: number;
 }
 
 export interface AiApi {

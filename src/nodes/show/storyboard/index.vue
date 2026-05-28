@@ -231,8 +231,6 @@ const stateTheme: Record<StoryboardState, "default" | "primary" | "success" | "d
 </script>
 
 <script lang="ts">
-import logo from "@/assets/logo.jpg";
-
 type StoryboardState = "未生成" | "生成中" | "已完成" | "生成失败";
 
 interface StoryboardItem {
@@ -252,9 +250,6 @@ interface StoryboardItem {
 interface Data {
   storyboard: StoryboardItem[];
 }
-
-export const icon = logo;
-export const defaultData: Data = { storyboard: [] };
 </script>
 
 <style lang="scss" scoped>

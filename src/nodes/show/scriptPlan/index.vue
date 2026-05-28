@@ -44,18 +44,10 @@ function handleCreated(editor: IDomEditor) {
 </script>
 
 <script lang="ts">
-import logo from "@/assets/logo.jpg";
-
 interface Data {
   scriptPlan: string;
   v?: number;
 }
-
-export const icon = logo;
-
-export const defaultData: Data = {
-  scriptPlan: "",
-};
 </script>
 
 <style lang="scss" scoped>

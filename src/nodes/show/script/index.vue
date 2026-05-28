@@ -45,18 +45,10 @@ function handleCreated(editor: IDomEditor) {
 </script>
 
 <script lang="ts">
-import logo from "@/assets/logo.jpg";
-
 interface Data {
   script: string;
   v?: number;
 }
-
-export const icon = logo;
-
-export const defaultData: Data = {
-  script: "",
-};
 </script>
 
 <style lang="scss" scoped>

@@ -185,8 +185,6 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
 </script>
 
 <script lang="ts">
-import logo from "@/assets/logo.jpg";
-
 type AssetType = "role" | "tool" | "scene" | "clip";
 type AssetState = "未生成" | "生成中" | "已完成" | "生成失败";
 type TagTheme = "default" | "primary" | "success" | "warning" | "danger";
@@ -220,12 +218,6 @@ interface Asset {
 interface Data {
   assets: Asset[];
 }
-
-export const icon = logo;
-
-export const defaultData: Data = {
-  assets: [],
-};
 </script>
 
 <style lang="scss" scoped>
