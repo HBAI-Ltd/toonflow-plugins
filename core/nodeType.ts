@@ -1,8 +1,15 @@
-export type HANDLE_TYPE_PRIMITIVE = "INT" | "FLOAT" | "STRING" | "BOOLEAN";
-export type HANDLE_TYPE_MEDIA = "IMAGE" | "MASK" | "AUDIO" | "VIDEO";
-export type HANDLE_TYPE_COMPUTE = "LATENT" | "CONDITIONING";
+export type DataTypeMap = {
+  INT: number;
+  FLOAT: number;
+  STRING: string;
+  BOOLEAN: boolean;
+  IMAGE: ImageData;
+  AUDIO: AudioData;
+  VIDEO: VideoData;
+  ANY: unknown;
+};
 
-export type HANDLE_TYPE = HANDLE_TYPE_PRIMITIVE | HANDLE_TYPE_MEDIA | HANDLE_TYPE_COMPUTE | "ANY";
+export type DataType = keyof DataTypeMap;
 
 export interface ImageData {
   url: string;
@@ -10,13 +17,6 @@ export interface ImageData {
   width?: number;
   height?: number;
   format?: "png" | "jpg" | "webp" | "gif";
-}
-
-export interface MaskData {
-  url: string;
-  name?: string;
-  width?: number;
-  height?: number;
 }
 
 export interface AudioData {
@@ -37,45 +37,7 @@ export interface VideoData {
   format?: "mp4" | "webm";
 }
 
-export interface LatentData {
-  url: string;
-  width: number;
-  height: number;
-  batchSize?: number;
-}
-
 export interface ConditioningData {
   text: string;
   strength?: number;
-}
-
-export type HANDLE_VALUE_MAP = {
-  INT: number;
-  FLOAT: number;
-  STRING: string;
-  BOOLEAN: boolean;
-  IMAGE: ImageData;
-  MASK: MaskData;
-  AUDIO: AudioData;
-  VIDEO: VideoData;
-  LATENT: LatentData;
-  CONDITIONING: ConditioningData;
-  ANY: unknown;
-};
-
-export interface HANDLEDATA<T extends HANDLE_TYPE = HANDLE_TYPE> {
-  type: T;
-  value: HANDLE_VALUE_MAP[T];
-}
-
-export interface HANDLEDOPT {
-  inputs?: {
-    [handleId: string]: HANDLE_TYPE[];
-  };
-  outputs?: {
-    [handleId: string]: {
-      type: HANDLE_TYPE[];
-      value?: HANDLE_VALUE_MAP[HANDLE_TYPE] | null;
-    };
-  };
 }

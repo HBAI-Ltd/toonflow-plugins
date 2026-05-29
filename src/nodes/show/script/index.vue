@@ -11,6 +11,7 @@ import type { IDomEditor, IToolbarConfig } from "@wangeditor/editor";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
 import { marked } from "marked";
+import { useToonflowUMD } from "#/core";
 
 interface Data {
   script: string;
@@ -19,30 +20,31 @@ interface Data {
 
 registerTgModule();
 
+const sdk = useToonflowUMD();
+const data = sdk.getData<Data>();
+
 const editorRef = shallowRef<IDomEditor>();
 
 const toolbarConfig: Partial<IToolbarConfig> = {
   toolbarKeys: ["bold", "italic", "underline", "through", "color", "bgColor", "fontSize", "bulletedList", "numberedList", "undo", "redo"],
 };
 
-const data = defineModel<Data>("DATA");
-
 const valueHtml = computed({
   get() {
-    return data.value!.script;
+    return data.value.script;
   },
   set(val) {
-    data.value!.script = val;
+    data.value.script = val;
   },
 });
 
 function handleCreated(editor: IDomEditor) {
   editorRef.value = editor;
   // v 字段为 1 表示已迁移为 HTML，缺失时视为旧 markdown 数据，做一次性转换
-  if (!data.value!.v) {
-    const raw = data.value!.script;
-    data.value!.script = raw ? (marked(raw) as string) : raw;
-    data.value!.v = 1;
+  if (!data.value.v) {
+    const raw = data.value.script;
+    data.value.script = raw ? (marked(raw) as string) : raw;
+    data.value.v = 1;
   }
 }
 

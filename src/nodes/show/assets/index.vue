@@ -49,6 +49,7 @@
 import { DialogPlugin } from "tdesign-vue-next";
 import { useToonflowUMD } from "#/core";
 
+// TODO(sdk): assets / flow / ui 能力在新 SDK 中尚未暴露，临时通过 any 透传，等核心补齐后移除
 type AssetType = "role" | "tool" | "scene" | "clip";
 type AssetState = "未生成" | "生成中" | "已完成" | "生成失败";
 type TagTheme = "default" | "primary" | "success" | "warning" | "danger";
@@ -83,9 +84,11 @@ interface Data {
   assets: Asset[];
 }
 
-const { fn } = useToonflowUMD();
+const sdk = useToonflowUMD();
+const fn = sdk.fn as any;
 
-const data = defineModel<Data>("DATA");
+const node = sdk.getNode();
+const data = sdk.getData<Data>();
 
 const previewVisible = ref(false);
 const previewImages = ref<string[]>([]);
@@ -213,7 +216,7 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
   if (res.type == "IMAGE") {
     await fn.assets.updateAssetsUrl(target.id, res.value.url, target.flowId!);
     target.src = res.value.url;
-    data.value = { ...data.value! };
+    node.data.data = { ...node.data.data };
   }
 }
 </script>

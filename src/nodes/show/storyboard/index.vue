@@ -98,9 +98,12 @@ interface Data {
   storyboard: StoryboardItem[];
 }
 
-const { fn } = useToonflowUMD();
+const sdk = useToonflowUMD();
+// TODO(sdk): flow / assets / ui 能力在新 SDK 中尚未暴露，临时通过 any 透传
+const fn = sdk.fn as any;
 
-const data = defineModel<Data>("DATA");
+const node = sdk.getNode();
+const data = sdk.getData<Data>();
 const storyboard = computed(() => data.value?.storyboard ?? []);
 
 const preview = reactive({ visible: false, images: [] as string[] });
@@ -215,7 +218,7 @@ async function editImage(index: number) {
       }),
     });
     data.value.storyboard[index].flowId = item.flowId;
-    data.value = { ...data.value };
+    node.data.data = { ...node.data.data };
   }
 
   const res = await fn.ui.openEditor({
@@ -225,7 +228,7 @@ async function editImage(index: number) {
   if (!res || res.type !== "IMAGE") return;
 
   data.value.storyboard[index].src = res.value.url;
-  data.value = { ...data.value };
+  node.data.data = { ...node.data.data };
 }
 
 function generate() {

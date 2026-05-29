@@ -12,6 +12,7 @@ import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
 import markdownModule from "@wangeditor/plugin-md";
 import { marked } from "marked";
+import { useToonflowUMD } from "#/core";
 
 if (!(globalThis as any).__toonflowMdRegistered) {
   Boot.registerModule(markdownModule);
@@ -24,6 +25,9 @@ interface Data {
 }
 
 registerTgModule();
+
+const sdk = useToonflowUMD();
+const data = sdk.getData<Data>();
 
 const editorRef = shallowRef<IDomEditor>();
 
@@ -47,25 +51,23 @@ const toolbarConfig: Partial<IToolbarConfig> = {
   ],
 };
 
-const data = defineModel<Data>("DATA");
-
 const valueHtml = computed({
   get() {
-    return data.value!.storyboardTable;
+    return data.value.storyboardTable;
   },
   set(val) {
-    data.value!.storyboardTable = val;
+    data.value.storyboardTable = val;
   },
 });
 
 function handleCreated(editor: IDomEditor) {
   editorRef.value = editor;
-  if (!data.value!.v) {
-    const raw = data.value!.storyboardTable;
+  if (!data.value.v) {
+    const raw = data.value.storyboardTable;
     if (raw) {
       editor.setHtml(marked(raw) as string);
     }
-    data.value!.v = 1;
+    data.value.v = 1;
   }
 }
 </script>

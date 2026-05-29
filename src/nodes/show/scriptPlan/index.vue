@@ -11,6 +11,7 @@ import type { IDomEditor, IToolbarConfig } from "@wangeditor/editor";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
 import { marked } from "marked";
+import { useToonflowUMD } from "#/core";
 
 interface Data {
   scriptPlan: string;
@@ -19,29 +20,30 @@ interface Data {
 
 registerTgModule();
 
+const sdk = useToonflowUMD();
+const data = sdk.getData<Data>();
+
 const editorRef = shallowRef<IDomEditor>();
 
 const toolbarConfig: Partial<IToolbarConfig> = {
   toolbarKeys: ["bold", "italic", "underline", "through", "color", "bgColor", "fontSize", "bulletedList", "numberedList", "undo", "redo"],
 };
 
-const data = defineModel<Data>("DATA");
-
 const valueHtml = computed({
   get() {
-    return data.value!.scriptPlan;
+    return data.value.scriptPlan;
   },
   set(val) {
-    data.value!.scriptPlan = val;
+    data.value.scriptPlan = val;
   },
 });
 
 function handleCreated(editor: IDomEditor) {
   editorRef.value = editor;
-  if (!data.value!.v) {
-    const raw = data.value!.scriptPlan;
-    data.value!.scriptPlan = raw ? (marked(raw) as string) : raw;
-    data.value!.v = 1;
+  if (!data.value.v) {
+    const raw = data.value.scriptPlan;
+    data.value.scriptPlan = raw ? (marked(raw) as string) : raw;
+    data.value.v = 1;
   }
 }
 

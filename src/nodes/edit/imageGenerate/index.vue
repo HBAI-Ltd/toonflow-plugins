@@ -1,15 +1,15 @@
 <template>
   <div class="image" ref="triggerRef" @click="popupOpen = !popupOpen">
-    <Handle :id="inputHandelId" type="target" :position="Position.Left" :is-valid-connection="sdk.isValidConnection" />
+    <Handle :id="inputHandelId" type="target" :position="Position.Left" :is-valid-connection="isValidConnection" />
     <img v-if="data?.generatedImage" :src="data.generatedImage" class="mainImg" alt="" />
     <div v-else class="imgPlaceholder">
       <t-empty type="maintenance" title="没有图片" />
     </div>
-    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="sdk.isValidConnection" />
+    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="isValidConnection" />
     <div v-show="popupOpen" class="imageNodeFloat" @click.stop @mousedown.stop @wheel.stop>
-      <VueDraggable v-if="mediaInputs.length" v-model="orderedIndices" :animation="150" class="refList f">
+      <VueDraggable v-if="imageInputs.length" v-model="orderedIndices" :animation="150" class="refList f">
         <div class="item" v-for="origIdx in orderedIndices" :key="origIdx">
-          <img v-if="mediaInputs[origIdx]?.value?.url" :src="mediaInputs[origIdx].value.url" class="smallImage" alt="" />
+          <img v-if="imageInputs[origIdx]?.url" :src="imageInputs[origIdx]!.url" class="smallImage" alt="" />
           <div v-else class="itemEmpty"><t-icon name="image" size="24px" /></div>
         </div>
       </VueDraggable>
@@ -41,7 +41,7 @@
               <template #icon><i-arrow-up /></template>
             </t-button>
           </t-popup>
-          <t-popup :content="$t('workbench.production.save')" v-if="sdk.selector?.types.includes('IMAGE')">
+          <t-popup :content="$t('workbench.production.save')" v-if="selector?.types.includes('IMAGE')">
             <t-button theme="primary" size="small" class="keepBtn" :disabled="generating" :loading="generating" @click="handleKeep">
               <template #icon><i-save /></template>
             </t-button>
@@ -53,11 +53,13 @@
 </template>
 
 <script setup lang="ts">
-import { Handle, Position, useVueFlow } from "@vue-flow/core";
+import { Handle, Position, useVueFlow, type ValidConnectionFunc } from "@vue-flow/core";
+import { MessagePlugin } from "tdesign-vue-next";
 import { VueDraggable } from "vue-draggable-plus";
 import mentionInput from "@/components/mentionInput.vue";
 import modelSelect from "@/components/modelSelect.vue";
-import { useToonflowUMD, type HANDLEDOPT, type ImageData } from "#/core";
+import { useToonflowUMD, type TargetHandleData } from "#/core";
+import type { ImageData } from "#/core/nodeType";
 
 interface Data {
   generatedImage?: string;
@@ -70,26 +72,34 @@ interface Data {
 }
 
 const sdk = useToonflowUMD();
+// TODO(sdk): ai.generateFlowImage / selector / projectId 在新 SDK 中尚未暴露，临时通过 any 透传
+const fn = sdk.fn as any;
+const selector = (sdk as any).selector as { types: string[]; onSelect: (v: any) => void } | undefined;
+const projectId = (sdk as any).projectId as { value: number } | undefined;
+
+const data = sdk.getData<Data>();
 
 function handleKeep() {
-  if (!data.value?.generatedImage || !sdk.selector) return;
-  sdk.selector.onSelect({ type: "IMAGE", value: { url: data.value.generatedImage } });
+  if (!data.value?.generatedImage || !selector) return;
+  selector.onSelect({ type: "IMAGE", value: { url: data.value.generatedImage } });
 }
 
-const { viewport } = useVueFlow(sdk.flowId);
+const { viewport } = useVueFlow(sdk.info.flowId);
 
 const generating = ref(false);
-
-const data = defineModel<Data>("DATA");
 
 const triggerRef = ref<HTMLElement | null>(null);
 const popupOpen = ref(false);
 
-const inputHandelId = sdk.handleId("input");
-const outputHandelId = sdk.handleId("output");
-
 // values/types 均为数组，支持 N 连 1
-const mediaInputs = sdk.inputValue<ImageData>(inputHandelId);
+const { id: inputHandelId, value: mediaInputs } = sdk.register.handles.source<{ type: ["IMAGE"] }>("input", { type: ["IMAGE"] });
+const { id: outputHandelId, value: outputValue } = sdk.register.handles.target<TargetHandleData<"IMAGE">>("output", {
+  type: "IMAGE",
+  value: null,
+});
+
+// 仅演示骨架：对输入值做 IMAGE 类型窄化
+const imageInputs = computed(() => mediaInputs.value.map((h) => h?.value as ImageData | undefined));
 
 const orderedIndices = ref<number[]>([]);
 
@@ -101,10 +111,10 @@ watch(
   { immediate: true }
 );
 
-const sortedMediaInputs = computed(() => orderedIndices.value.map((i) => mediaInputs.value[i]).filter(Boolean));
+const sortedMediaInputs = computed(() => orderedIndices.value.map((i) => imageInputs.value[i]).filter(Boolean) as ImageData[]);
 
 const fileList = computed(() =>
-  sortedMediaInputs.value.map(({ value: val }, i) => ({
+  sortedMediaInputs.value.map((val, i) => ({
     id: `${inputHandelId}_${i}`,
     label: `图${i + 1}`,
     type: "IMAGE",
@@ -125,13 +135,13 @@ async function handleGenerate() {
   if (!data.value?.ratio) return window.$message.error($t("workbench.production.editImage.selectRatio"));
   generating.value = true;
   try {
-    const { url } = await sdk.fn.ai.generateFlowImage({
+    const { url } = await fn.ai.generateFlowImage({
       references: data.value?.references.map((i) => i.image).filter(Boolean),
       model: data.value?.model,
       quality: data.value?.quality,
       ratio: data.value?.ratio,
       prompt: data.value?.prompt,
-      projectId: sdk.projectId?.value as number,
+      projectId: projectId?.value as number,
     });
     data.value!.generatedImage = url;
   } catch (e) {
@@ -164,19 +174,23 @@ watch(
   { immediate: true }
 );
 
-sdk.registerHandles(
-  computed<HANDLEDOPT>(() => ({
-    inputs: {
-      [inputHandelId]: ["IMAGE"],
-    },
-    outputs: {
-      [outputHandelId]: {
-        type: ["IMAGE"],
-        value: data.value?.generatedImage ? { url: data.value.generatedImage } : null,
-      },
-    },
-  }))
+// 同步 generatedImage 到输出 handle
+watch(
+  () => data.value?.generatedImage,
+  (img) => {
+    outputValue.value = {
+      type: "IMAGE",
+      value: img ? { url: img } : null,
+    };
+  },
+  { immediate: true }
 );
+
+const isValidConnection: ValidConnectionFunc = (connection, elements) => {
+  const { canConnect, failReason } = sdk.checkConnection({ connection, elements });
+  if (!canConnect) MessagePlugin.warning(`连接失败：${failReason}`);
+  return canConnect;
+};
 </script>
 
 <style lang="scss" scoped>

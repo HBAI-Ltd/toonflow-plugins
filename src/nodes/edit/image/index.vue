@@ -1,6 +1,6 @@
 <template>
   <div class="imageNode">
-    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="sdk.isValidConnection" />
+    <Handle :id="outputHandelId" type="source" :position="Position.Right" :is-valid-connection="isValidConnection" />
 
     <div class="uploadArea" @click="triggerUpload">
       <template v-if="data!.src">
@@ -40,31 +40,43 @@
 <script setup lang="ts">
 import { MessagePlugin } from "tdesign-vue-next";
 import type { DropdownOption } from "tdesign-vue-next/es/dropdown";
-import { Handle, Position } from "@vue-flow/core";
-import { useToonflowUMD, type HANDLEDOPT } from "#/core";
+import { Handle, Position, type ValidConnectionFunc } from "@vue-flow/core";
+import { useToonflowUMD, type TargetHandleData } from "#/core";
 
 interface Data {
   src: string;
   fileName: string;
 }
 
-const data = defineModel<Data>("DATA");
+const sdk = useToonflowUMD();
+// TODO(sdk): ui.openAssetManager / ui.openStoryboardImageCheck 在新 SDK 中尚未暴露，临时通过 any 透传
+const fn = sdk.fn as any;
+
+const data = sdk.getData<Data>();
 
 const fileInputRef = ref<HTMLInputElement>();
 
-const sdk = useToonflowUMD();
-const outputHandelId = sdk.handleId("output");
+const { id: outputHandelId, value: outputValue } = sdk.register.handles.target<TargetHandleData<"IMAGE">>("output", {
+  type: "IMAGE",
+  value: null,
+});
 
-sdk.registerHandles(
-  computed<HANDLEDOPT>(() => ({
-    outputs: {
-      [outputHandelId]: {
-        type: ["IMAGE"],
-        value: data.value?.src ? { url: data.value.src, name: data.value.fileName || undefined } : null,
-      },
-    },
-  })),
+watch(
+  () => [data.value?.src, data.value?.fileName] as const,
+  ([src, fileName]) => {
+    outputValue.value = {
+      type: "IMAGE",
+      value: src ? { url: src, name: fileName || undefined } : null,
+    };
+  },
+  { immediate: true },
 );
+
+const isValidConnection: ValidConnectionFunc = (connection, elements) => {
+  const { canConnect, failReason } = sdk.checkConnection({ connection, elements });
+  if (!canConnect) MessagePlugin.warning(`连接失败：${failReason}`);
+  return canConnect;
+};
 
 const options: DropdownOption[] = [
   { content: "选择资产", value: 1 },
@@ -75,7 +87,7 @@ const options: DropdownOption[] = [
 
 async function clickHandler(opt: DropdownOption) {
   if (opt.value == 1) {
-    const [asset] = await sdk.fn.ui.openAssetManager({
+    const [asset] = await fn.ui.openAssetManager({
       multiple: false,
       types: ["role", "tool", "scene", "clip"],
       clipMediaTypes: ["image"],
@@ -84,7 +96,7 @@ async function clickHandler(opt: DropdownOption) {
     data.value.src = asset.src;
     data.value.fileName = asset.name;
   } else if (opt.value == 2) {
-    const [item] = await sdk.fn.ui.openStoryboardImageCheck({ multiple: false });
+    const [item] = await fn.ui.openStoryboardImageCheck({ multiple: false });
     if (!item || !data.value) return;
     data.value.src = item.imageUrl;
     data.value.fileName = item.name;
