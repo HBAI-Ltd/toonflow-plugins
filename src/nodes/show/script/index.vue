@@ -21,6 +21,9 @@ interface Data {
 registerTgModule();
 
 const sdk = useToonflowUMD();
+
+const node = sdk.getNode();
+
 const data = sdk.getData<Data>();
 
 const editorRef = shallowRef<IDomEditor>();

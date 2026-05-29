@@ -85,7 +85,6 @@ interface Data {
 }
 
 const sdk = useToonflowUMD();
-const fn = sdk.fn as any;
 
 const node = sdk.getNode();
 const data = sdk.getData<Data>();
@@ -144,13 +143,9 @@ async function remove(asset: Asset, derive?: DeriveAsset) {
   });
   if (!ok) return;
 
-  const ids = derive ? derive.id : [asset.id, ...(asset.derive?.map((d) => d.id) ?? [])];
+  const ids = derive ? [derive.id] : [asset.id, ...(asset.derive?.map((d) => d.id) ?? [])];
   try {
-    const res = await fn.assets.del(ids);
-    if (res.code !== 200) {
-      window.$message?.error(res.message || "删除失败");
-      return;
-    }
+    await sdk.fn.sql("o_assets").whereIn("id", ids).delete();
     if (derive) {
       const i = asset.derive.indexOf(derive);
       if (i > -1) asset.derive.splice(i, 1);
@@ -169,13 +164,13 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
 
   let needBuild = !target.flowId;
   if (target.flowId) {
-    const {data} = await fn.flow.list({ id: target.flowId });
-    if (!data.data?.length) needBuild = true;
+    const item = await sdk.fn.sql("o_imageFlow").where({ id: target.flowId }).first();
+    if (!item || !item.flowData) needBuild = true;
   }
 
   if (needBuild) {
     target.flowId = Date.now();
-    await fn.flow.insert({
+    await sdk.fn.sql("o_imageFlow").insert({
       id: target.flowId,
       flowData: JSON.stringify({
         nodes: [
@@ -206,15 +201,23 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
         ],
       }),
     });
-    await fn.assets.update({ id: target.id, flowId: target.flowId });
+
+    await sdk.fn.sql("o_assets").where("id", "=", target.id).update({ flowId: target.flowId });
   }
-  const res = await fn.ui.openEditor({
+  const res = await sdk.ui.openEditor({
     flowId: target.flowId!,
     selectorMode: ["IMAGE"],
   });
+  console.log("%c Line:208 🥟 res", "background:#4fff4B", res);
+
   if (!res) return;
   if (res.type == "IMAGE") {
-    await fn.assets.updateAssetsUrl(target.id, res.value.url, target.flowId!);
+    const [imageId] = await sdk.fn.sql("o_image").insert({
+      filePath: new URL(res.value.url).pathname,
+      state: "已完成",
+      assetsId: target.id,
+    });
+    await sdk.fn.sql("o_assets").where({ id: target.id }).update({ flowId: target.flowId, imageId });
     target.src = res.value.url;
     node.data.data = { ...node.data.data };
   }

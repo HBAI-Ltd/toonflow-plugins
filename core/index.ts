@@ -3,6 +3,10 @@ import { tool, Tool } from "ai";
 import { z } from "zod";
 import { useNode, useVueFlow, useNodeConnections, useNodesData, type ValidConnectionFunc } from "@vue-flow/core";
 import type { DataType, DataTypeMap } from "./nodeType";
+import type { DB } from "./database";
+
+type TableName = keyof DB & string;
+type RowType<TName extends TableName> = DB[TName];
 
 export interface ToonflowHost {
   baseUrl: Ref<string>;
@@ -15,6 +19,20 @@ export interface ToonflowHost {
   sql: Knex;
   projectId: string;
   episodesId?: string;
+  ui: {
+    openEditor(config: { flowId: string | number; selectorMode?: DataType[] }): Promise<unknown | null>;
+    openAssetManager(options?: {
+      types?: ("role" | "tool" | "scene" | "clip" | "audio")[];
+      clipMediaTypes?: ("image" | "video" | "audio")[];
+      multiple?: boolean;
+      title?: string;
+      selectorMode?: boolean;
+    }): Promise<any[]>;
+    openStoryboardImageCheck(options?: {
+      multiple?: boolean;
+      scriptId?: number;
+    }): Promise<{ id: number; imageUrl: string; intro: string; name: string; imgPrompt: string; videoPrompt: string }[]>;
+  };
 }
 
 export interface SourceHandleData<T extends DataType = DataType> {
@@ -54,7 +72,8 @@ export function useToonflowUMD() {
   // 从宿主注入运行时上下文，未注入说明插件被独立运行
   const host = inject<ToonflowHost | null>("TOONFLOW_PROVIDE_UMD", null);
   if (!host) throw new Error("[useToonflowUMD] 宿主未注入TOONFLOW_PROVIDE_UMD");
-
+  if (!host.flowId) throw new Error("[useToonflowUMD] 宿主提供的 flowId 无效");
+  
   const vueFlow = useVueFlow(host.flowId);
 
   const currentodeId = inject<string>("NODE_ID");
@@ -155,8 +174,8 @@ export function useToonflowUMD() {
   return {
     info: {
       flowId: host.flowId,
-      projectId:host.projectId,
-      episodesId:host.episodesId,
+      projectId: host.projectId,
+      episodesId: host.episodesId,
     },
     getNode,
     getData,
@@ -170,8 +189,9 @@ export function useToonflowUMD() {
     },
     fn: {
       file: host.file,
-      sql: host.sql,
+      sql: Object.assign(<TName extends TableName>(table: TName) => host.sql<RowType<TName>, RowType<TName>[]>(table), host.sql),
     },
+    ui: host.ui,
     checkConnection,
   };
 }

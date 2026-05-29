@@ -49,8 +49,6 @@ interface Data {
 }
 
 const sdk = useToonflowUMD();
-// TODO(sdk): ui.openAssetManager / ui.openStoryboardImageCheck 在新 SDK 中尚未暴露，临时通过 any 透传
-const fn = sdk.fn as any;
 
 const data = sdk.getData<Data>();
 
@@ -69,7 +67,7 @@ watch(
       value: src ? { url: src, name: fileName || undefined } : null,
     };
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 const isValidConnection: ValidConnectionFunc = (connection, elements) => {
@@ -87,7 +85,7 @@ const options: DropdownOption[] = [
 
 async function clickHandler(opt: DropdownOption) {
   if (opt.value == 1) {
-    const [asset] = await fn.ui.openAssetManager({
+    const [asset] = await sdk.ui.openAssetManager({
       multiple: false,
       types: ["role", "tool", "scene", "clip"],
       clipMediaTypes: ["image"],
@@ -96,7 +94,7 @@ async function clickHandler(opt: DropdownOption) {
     data.value.src = asset.src;
     data.value.fileName = asset.name;
   } else if (opt.value == 2) {
-    const [item] = await fn.ui.openStoryboardImageCheck({ multiple: false });
+    const [item] = await sdk.ui.openStoryboardImageCheck({ multiple: false });
     if (!item || !data.value) return;
     data.value.src = item.imageUrl;
     data.value.fileName = item.name;
