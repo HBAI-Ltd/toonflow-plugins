@@ -9,12 +9,8 @@
       <t-option v-for="item in list.children" :key="item.id" :value="`${item.id}:${item.value}`" :label="item.label">
         <div class="optionItem">
           <div class="optionMain">
-            <t-avatar
-              v-if="getModelIcon(item.label, item.value)"
-              size="24px"
-              shape="round"
-              :image="getModelIcon(item.label, item.value)!" />
-            <t-avatar v-else size="24px" shape="round" class="fallbackAvatar">{{ item.label?.slice(0, 1)?.toUpperCase() || 'M' }}</t-avatar>
+            <t-avatar v-if="getModelIcon(item.label, item.value)" size="24px" shape="round" :image="getModelIcon(item.label, item.value)!" />
+            <t-avatar v-else size="24px" shape="round" class="fallbackAvatar">{{ item.label?.slice(0, 1)?.toUpperCase() || "M" }}</t-avatar>
             <div class="optionLabel">{{ item.label }}</div>
           </div>
           <span class="optionType">{{ item.type }}</span>
@@ -27,7 +23,6 @@
 
 <script setup lang="ts">
 import { useToonflowUMD, type TargetHandleData } from "#/core";
-
 
 const sdk = useToonflowUMD();
 
@@ -77,6 +72,7 @@ async function onChange(value: any, { option }: any) {
   selectValueLabel.value = option.label;
   if (props.changeConfig) {
     const data = await sdk.ai.getModelDetail(value);
+    console.log("%c Line:80 🍌 data", "background:#e41a6a", data);
     emit("change", value, data);
   } else {
     emit("change", value);

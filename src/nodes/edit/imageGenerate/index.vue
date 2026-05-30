@@ -132,7 +132,7 @@ async function handleGenerate() {
   if (!data.value?.ratio) return window.$message.error($t("workbench.production.editImage.selectRatio"));
   generating.value = true;
   try {
-    const { url } = await sdk.ai.generateFlowImage({
+    const { url } = await sdk.ai.generateImage({
       references: data.value?.references.map((i) => i.image).filter(Boolean),
       model: data.value?.model,
       quality: data.value?.quality,

@@ -57,7 +57,7 @@ export interface ToonflowHost<T extends DataType = DataType> {
     getModelList: (type: "text" | "image" | "all" | "video") => Promise<ModelGroup[]>;
     getModelDetail: (modelId: string) => Promise<any>;
     getModelIcon: (label?: string, value?: string) => string | null;
-    generateFlowImage: (params: {
+    generateImage: (params: {
       model: string;
       quality: string;
       ratio: string;
