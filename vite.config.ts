@@ -49,7 +49,7 @@ export default defineConfig(() => {
       cssInjectedByJs(),
     ],
     build: {
-      minify: true,
+      minify: false,
       sourcemap: false,
       outDir: resolve(__dirname, "dist"),
       emptyOutDir: false,

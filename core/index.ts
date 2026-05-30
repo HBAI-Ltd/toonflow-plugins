@@ -34,7 +34,7 @@ export interface ToonflowHost<T extends DataType = DataType> {
   projectId: string;
   episodesId?: string;
   ui: {
-    openEditor(config: { flowId: string | number; selectorMode?: DataType[] }): Promise<unknown | null>;
+    openEditor<T extends DataType = DataType>(config: { dataId: string | number; dataType?: "infiniteCanvas" | "editFlow"; selectorMode?: T[] }): Promise<TargetHandleData<T> | null>;
     openAssetManager(options?: {
       types?: ("role" | "tool" | "scene" | "clip" | "audio")[];
       clipMediaTypes?: ("image" | "video" | "audio")[];

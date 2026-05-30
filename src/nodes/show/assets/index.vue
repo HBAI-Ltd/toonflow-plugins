@@ -170,12 +170,13 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
 
   if (needBuild) {
     target.flowId = Date.now();
+    const generateNodeId = `generate_${target.flowId}`;
     await sdk.fn.sql("o_imageFlow").insert({
       id: target.flowId,
       flowData: JSON.stringify({
         nodes: [
           {
-            id: "2",
+            id: generateNodeId,
             type: "pluginNode",
             position: { x: 600, y: 100 },
             data: {
@@ -192,35 +193,25 @@ async function edit(asset: Asset, derive?: DeriveAsset) {
             },
           },
         ],
-        edges: [
-          {
-            id: "e1-2",
-            source: "1",
-            target: "2",
-          },
-        ],
+        edges: [],
       }),
     });
 
     await sdk.fn.sql("o_assets").where("id", "=", target.id).update({ flowId: target.flowId });
   }
   const res = await sdk.ui.openEditor({
-    flowId: target.flowId!,
+    dataId: target.flowId!,
     selectorMode: ["IMAGE"],
   });
-  console.log("%c Line:208 🥟 res", "background:#4fff4B", res);
-
-  if (!res) return;
-  if (res.type == "IMAGE") {
-    const [imageId] = await sdk.fn.sql("o_image").insert({
-      filePath: new URL(res.value.url).pathname,
-      state: "已完成",
-      assetsId: target.id,
-    });
-    await sdk.fn.sql("o_assets").where({ id: target.id }).update({ flowId: target.flowId, imageId });
-    target.src = res.value.url;
-    node.data.data = { ...node.data.data };
-  }
+  if (!res || res.type !== "IMAGE") return;
+  const [imageId] = await sdk.fn.sql("o_image").insert({
+    filePath: new URL(res.value?.url!).pathname,
+    state: "已完成",
+    assetsId: target.id,
+  });
+  await sdk.fn.sql("o_assets").where({ id: target.id }).update({ flowId: target.flowId, imageId });
+  target.src = res.value?.url ?? "";
+  node.data.data = { ...node.data.data };
 }
 </script>
 

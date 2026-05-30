@@ -99,8 +99,6 @@ interface Data {
 }
 
 const sdk = useToonflowUMD();
-// TODO(sdk): flow / assets / ui 能力在新 SDK 中尚未暴露，临时通过 any 透传
-const fn = sdk.fn as any;
 
 const node = sdk.getNode();
 const data = sdk.getData<Data>();
@@ -143,31 +141,33 @@ function saveEdit() {
 
 async function editImage(index: number) {
   const item = storyboard.value[index];
+  console.log("%c Line:144 🍭 item", "background:#2eafb0", item);
   if (!item || !data.value) return;
 
   let needBuild = !item.flowId;
   if (item.flowId) {
-    const res = await fn.flow.list({ id: item.flowId });
-    if (!res.data?.data?.length) needBuild = true;
+    const res = await sdk.fn.sql("o_imageFlow").where({ id: item.flowId }).first();
+    if (!res || !res.flowData) needBuild = true;
   }
 
   if (needBuild) {
     item.flowId = Date.now();
-
     const assocIds = item.associateAssetsIds ?? [];
     const assocAssets: Array<{ src: string; name: string }> = [];
     if (assocIds.length > 0) {
-      const results = await Promise.all(assocIds.map((id) => fn.assets.item(id)));
+      const results = await sdk.fn
+        .sql("o_assets")
+        .whereIn("o_assets.id", assocIds)
+        .leftJoin("o_image", "o_assets.imageId", "o_image.id")
+        .select("o_image.filePath as src");
       for (const res of results) {
-        if (res.code === 200 && res.data) {
-          const d = res.data as any;
-          assocAssets.push({ src: d.src ?? "", name: d.name ?? "" });
-        }
+        const path = res.src ? "/oss" + res.src : "";
+        assocAssets.push({ src: path, name: res.name ?? "" });
       }
     }
-
+    const generateNodeId = `generate_${item.flowId}`;
     const imageNodeDefs = assocAssets.map((asset, i) => ({
-      nodeId: `img_${i + 1}`,
+      nodeId: `img_${item.flowId}_${i + 1}`,
       src: asset.src,
       name: asset.name,
     }));
@@ -183,21 +183,21 @@ async function editImage(index: number) {
     }));
 
     const imageEdges = imageNodeDefs.map((def, i) => ({
-      id: `e_img${i + 1}_generate`,
+      id: `e_${def.nodeId}_${generateNodeId}`,
       type: "edge",
       source: def.nodeId,
-      sourceHandle: `${def.nodeId}__output`,
-      target: "generate",
-      targetHandle: `generate__input`,
+      sourceHandle: `${def.nodeId}-output-target`,
+      target: generateNodeId,
+      targetHandle: `${generateNodeId}-input-source`,
     }));
 
-    await fn.flow.insert({
+    await sdk.fn.sql("o_imageFlow").insert({
       id: item.flowId,
       flowData: JSON.stringify({
         nodes: [
           ...imageNodes,
           {
-            id: "generate",
+            id: generateNodeId,
             type: "pluginNode",
             position: { x: 600, y: 100 },
             data: {
@@ -221,13 +221,13 @@ async function editImage(index: number) {
     node.data.data = { ...node.data.data };
   }
 
-  const res = await fn.ui.openEditor({
-    flowId: item.flowId!,
+  const res = await sdk.ui.openEditor({
+    dataId: item.flowId!,
     selectorMode: ["IMAGE"],
   });
   if (!res || res.type !== "IMAGE") return;
 
-  data.value.storyboard[index].src = res.value.url;
+  data.value.storyboard[index].src = res.value?.url ?? null;
   node.data.data = { ...node.data.data };
 }
 
