@@ -26,9 +26,10 @@
 </template>
 
 <script setup lang="ts">
-import { useToonflowUMD } from "#/core";
+import { useToonflowUMD, type TargetHandleData } from "#/core";
 
-const { fn } = useToonflowUMD();
+
+const sdk = useToonflowUMD();
 
 interface VendorChild {
   id: number;
@@ -75,7 +76,7 @@ async function onChange(value: any, { option }: any) {
   selectValue.value = value;
   selectValueLabel.value = option.label;
   if (props.changeConfig) {
-    const data = await fn.ai.getModelDetail(value);
+    const data = await sdk.ai.getModelDetail(value);
     emit("change", value, data);
   } else {
     emit("change", value);
@@ -122,7 +123,7 @@ function handleModelChange() {
     });
 }
 function getModelIcon(label?: string, value?: string) {
-  return fn.ai.getModelIcon(label, value);
+  return sdk.ai.getModelIcon(label, value);
 }
 </script>
 
