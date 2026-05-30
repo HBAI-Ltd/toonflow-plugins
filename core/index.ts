@@ -8,7 +8,21 @@ import type { DB } from "./database";
 type TableName = keyof DB & string;
 type RowType<TName extends TableName> = DB[TName];
 
-export interface ToonflowHost {
+interface ModelItem {
+  id: number;
+  label: string;
+  value: string;
+  vendorId: number;
+  type: string;
+}
+
+interface ModelGroup {
+  group: string;
+  id: number;
+  children: ModelItem[];
+}
+
+export interface ToonflowHost<T extends DataType = DataType> {
   baseUrl: Ref<string>;
   flowId: string;
   file: {
@@ -32,6 +46,27 @@ export interface ToonflowHost {
       multiple?: boolean;
       scriptId?: number;
     }): Promise<{ id: number; imageUrl: string; intro: string; name: string; imgPrompt: string; videoPrompt: string }[]>;
+  };
+  language: "zh-CN" | "zh-TW" | "en" | "th-TH" | "vi-VN" | "ja-JP" | "ru-RU" | string;
+  themeMode: "auto" | "light" | "dark";
+  selector: {
+    types: T[];
+    onSelect: (data: DataTypeMap[T]) => void;
+  } | null;
+  ai: {
+    getModelList: (type: "text" | "image" | "all" | "video") => Promise<ModelGroup[]>;
+    getModelDetail: (modelId: string) => Promise<any>;
+    getModelIcon: (label?: string, value?: string) => string | null;
+    generateFlowImage: (params: {
+      model: string;
+      quality: string;
+      ratio: string;
+      prompt?: string | undefined;
+      references?: string[] | undefined;
+      projectId: number | string;
+    }) => Promise<{
+      url: string;
+    }>;
   };
 }
 
@@ -73,7 +108,7 @@ export function useToonflowUMD() {
   const host = inject<ToonflowHost | null>("TOONFLOW_PROVIDE_UMD", null);
   if (!host) throw new Error("[useToonflowUMD] 宿主未注入TOONFLOW_PROVIDE_UMD");
   if (!host.flowId) throw new Error("[useToonflowUMD] 宿主提供的 flowId 无效");
-  
+
   const vueFlow = useVueFlow(host.flowId);
 
   const currentodeId = inject<string>("NODE_ID");
@@ -176,6 +211,8 @@ export function useToonflowUMD() {
       flowId: host.flowId,
       projectId: host.projectId,
       episodesId: host.episodesId,
+      language: host.language,
+      themeMode: host.themeMode,
     },
     getNode,
     getData,
@@ -193,5 +230,7 @@ export function useToonflowUMD() {
     },
     ui: host.ui,
     checkConnection,
+    selector: host.selector,
+    ai: host.ai,
   };
 }

@@ -97,7 +97,7 @@ const titleMap = {
   video: "视频",
 };
 function handleModelChange() {
-  fn.ai
+  sdk.ai
     .getModelList(props.type)
     .then((data) => {
       optionsData.value = data.map((group) => ({

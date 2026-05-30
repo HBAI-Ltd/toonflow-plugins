@@ -41,7 +41,7 @@
               <template #icon><i-arrow-up /></template>
             </t-button>
           </t-popup>
-          <t-popup :content="$t('workbench.production.save')" v-if="selector?.types.includes('IMAGE')">
+          <t-popup :content="$t('workbench.production.save')" v-if="sdk.selector?.types.includes('IMAGE')">
             <t-button theme="primary" size="small" class="keepBtn" :disabled="generating" :loading="generating" @click="handleKeep">
               <template #icon><i-save /></template>
             </t-button>
@@ -72,16 +72,13 @@ interface Data {
 }
 
 const sdk = useToonflowUMD();
-// TODO(sdk): ai.generateFlowImage / selector / projectId 在新 SDK 中尚未暴露，临时通过 any 透传
-const fn = sdk.fn as any;
-const selector = (sdk as any).selector as { types: string[]; onSelect: (v: any) => void } | undefined;
-const projectId = (sdk as any).projectId as { value: number } | undefined;
 
 const data = sdk.getData<Data>();
 
 function handleKeep() {
-  if (!data.value?.generatedImage || !selector) return;
-  selector.onSelect({ type: "IMAGE", value: { url: data.value.generatedImage } });
+  if (!data.value?.generatedImage) return;
+  if (!sdk.selector) return;
+  sdk.selector.onSelect({ type: "IMAGE", value: { url: data.value.generatedImage } });
 }
 
 const { viewport } = useVueFlow(sdk.info.flowId);
@@ -135,13 +132,13 @@ async function handleGenerate() {
   if (!data.value?.ratio) return window.$message.error($t("workbench.production.editImage.selectRatio"));
   generating.value = true;
   try {
-    const { url } = await fn.ai.generateFlowImage({
+    const { url } = await sdk.ai.generateFlowImage({
       references: data.value?.references.map((i) => i.image).filter(Boolean),
       model: data.value?.model,
       quality: data.value?.quality,
       ratio: data.value?.ratio,
       prompt: data.value?.prompt,
-      projectId: projectId?.value as number,
+      projectId: sdk.info.projectId,
     });
     data.value!.generatedImage = url;
   } catch (e) {
